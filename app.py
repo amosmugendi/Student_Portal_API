@@ -9,7 +9,7 @@ from datetime import timedelta
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moringa_students_portal.db'
-app.config['SECRET_KEY'] = 'YourSecretKey'
+app.config['SECRET_KEY'] = 'MoringaStudents'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 

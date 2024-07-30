@@ -45,7 +45,7 @@ class Student(db.Model, SerializerMixin):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship('User', back_populates='student')
-    grades = db.relationship('Courses', back_populates='student')
+    grades = db.relationship('Grade', back_populates='student')
     fee_balance = db.relationship('FeeBalance', back_populates='student', uselist=False)
     payments = db.relationship('Payment', back_populates='student', lazy='dynamic')
 
