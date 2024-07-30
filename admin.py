@@ -3,11 +3,10 @@ from flask_restful import Resource,Api
 from models import Student,User,db,FeeBalance
 from datetime import datetime
 from flask_jwt_extended import jwt_required
-from werkzeug.security import generate_password_hash
-
+from flask_bcrypt import Bcrypt
 
 admin_bp = Blueprint('admin_bp',__name__,url_prefix='/admin')
-
+bcrypt = Bcrypt()
 admin_api = Api(admin_bp)
 
 def check_user_exists(username, email):
@@ -19,6 +18,7 @@ class CreateStudent(Resource):
     def post(self):
         data = request.get_json()
 
+        # Ensure all required fields are provided
         required_fields = ['username', 'email', 'password', 'role', 'first_name', 'last_name', 'date_of_birth', 'current_phase']
         for field in required_fields:
             if field not in data:
@@ -28,7 +28,8 @@ class CreateStudent(Resource):
         if check_user_exists(data['username'], data['email']):
             return make_response(jsonify({"msg": "Username or email already exists"}), 409)
 
-        hashed_password = generate_password_hash(data.get('password'))
+        # Hash the password
+        hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
 
         # Create new User
         try:
@@ -74,8 +75,51 @@ class DeleteStudent(Resource):
         db.session.delete(student)
         db.session.commit()
         return 'Student removed from the database',204
+
+class GetStudentFeeBalance(Resource):
+    def get(self,student_id):
+        fee_balance = FeeBalance.query.get_or_404(student_id)
+        return make_response(fee_balance.to_dict(), 200)
+
+class FeesManagement(Resource):
+    jwt_required()
+    def post(self):
+        data = request.get_json()
+
+        due_date = datetime.strptime(data.get('due_date'), '%Y-%m-%d').date()
+
+        new_fee_balance = FeeBalance(
+        student_id = data.get('student_id'),
+        amount_due = data.get('amount_due'),
+        amount_paid = data.get('amount_paid'),
+        due_date = due_date
+        )
+
+        db.session.add(new_fee_balance)
+        db.session.commit()
+        return make_response(new_fee_balance.to_dict(), 200)
+
+class DeleteFeeBalance(Resource):
+    jwt_required()
+    def delete(self, fee_balance_id):
+        balance = FeeBalance.query.get_or_404(fee_balance_id)
+        db.session.delete(balance)
+        db.session.commit()
+        return 'Balance removed'
+
+class DeleteUsers(Resource):
+    jwt_required()
+    def delete(self,user_id):
+        user = User.query.get_or_404(user_id)
+        db.session.delete(user)
+        db.session.commit()
+        return f'User {user_id} removed successfuly'
     
 
     
 admin_api.add_resource(CreateStudent, '/create_student')
 admin_api.add_resource(DeleteStudent, '/delete_student/<int:student_id>')
+admin_api.add_resource(GetStudentFeeBalance, '/feebalance/<int:student_id>')
+admin_api.add_resource(DeleteFeeBalance, '/deletebalance/<int:fee_balance_id>')
+admin_api.add_resource(FeesManagement, '/fees')
+admin_api.add_resource(DeleteUsers, '/deleteusers/<int:user_id>')
