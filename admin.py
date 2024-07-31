@@ -191,7 +191,7 @@ class DeleteUsers(Resource):
 admin_api.add_resource(CreateStudent, '/create_student')
 admin_api.add_resource(StudentManager, '/studentmanagement/<int:student_id>')
 admin_api.add_resource(GetStudentFeeBalance, '/feebalance/<int:student_id>')
-admin_api.add_resource(ManageFeeBalance, '/deletebalance/<int:fee_balance_id>')
+admin_api.add_resource(ManageFeeBalance, '/managebalance/<int:fee_balance_id>')
 admin_api.add_resource(FeesManagement, '/fees')
 admin_api.add_resource(DeleteUsers, '/deleteusers/<int:user_id>')
 admin_api.add_resource(CreateGrade, '/addgrades')
