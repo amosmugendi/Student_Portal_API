@@ -69,7 +69,19 @@ class CreateStudent(Resource):
 
         return make_response(jsonify(new_student.to_dict()), 201)
 
-class DeleteStudent(Resource):
+class StudentManager(Resource):
+    jwt_required()
+    def put(self,student_id):
+        data = request.get_json()
+        student = Student.query.get_or_404(student_id)
+        student.user_id = data.get('user_id')
+        student.first_name = data.get('first_name')
+        student.last_name = data.get('last_name')
+        student.date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d')
+        student.current_phase = data.get('current_pahse')
+        db.session.commit()
+        return make_response(student.to_dict(), 200)
+
     jwt_required()
     def delete(self,student_id):
         student = Student.query.get_or_404(student_id)
@@ -101,7 +113,18 @@ class FeesManagement(Resource):
         db.session.commit()
         return make_response(new_fee_balance.to_dict(), 200)
 
-class DeleteFeeBalance(Resource):
+class ManageFeeBalance(Resource):
+    jwt_required()
+    def put(self, fee_balance_id):
+        data = request.get_json()
+        balance = FeeBalance.query.get_or_404(fee_balance_id)
+        balance.student_id = data.get('student_id')
+        balance.amount_due = data.get('amount_due')
+        balance.amount_paid = data.get('amount_paid')
+        balance.due_date = datetime.strptime(data.get('due_date'), '%Y-%m-%d')
+        db.session.commit()
+        return {'msg' : 'Updated successfuly'},200
+    
     jwt_required()
     def delete(self, fee_balance_id):
         balance = FeeBalance.query.get_or_404(fee_balance_id)
@@ -166,9 +189,9 @@ class DeleteUsers(Resource):
 
     
 admin_api.add_resource(CreateStudent, '/create_student')
-admin_api.add_resource(DeleteStudent, '/delete_student/<int:student_id>')
+admin_api.add_resource(StudentManager, '/studentmanagement/<int:student_id>')
 admin_api.add_resource(GetStudentFeeBalance, '/feebalance/<int:student_id>')
-admin_api.add_resource(DeleteFeeBalance, '/deletebalance/<int:fee_balance_id>')
+admin_api.add_resource(ManageFeeBalance, '/deletebalance/<int:fee_balance_id>')
 admin_api.add_resource(FeesManagement, '/fees')
 admin_api.add_resource(DeleteUsers, '/deleteusers/<int:user_id>')
 admin_api.add_resource(CreateGrade, '/addgrades')
