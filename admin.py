@@ -2,7 +2,7 @@ from flask import Blueprint, make_response, request, jsonify
 from flask_restful import Resource, Api
 from models import Student, User, db, FeeBalance, Grade
 from datetime import datetime
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
 
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
@@ -13,9 +13,19 @@ def check_user_exists(username, email):
     existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
     return existing_user is not None
 
+def admin_required(fn):
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        if current_user.role != 'admin':
+            return make_response(jsonify({"msg": "Admins only!"}), 403)
+        return fn(*args, **kwargs)
+    return wrapper
+
 # Student Management
 class CreateStudent(Resource):
-    @jwt_required()
+    @admin_required
     def post(self):
         data = request.get_json()
 
@@ -70,12 +80,12 @@ class CreateStudent(Resource):
         return make_response(jsonify(new_student.to_dict()), 201)
 
 class StudentManager(Resource):
-    @jwt_required()
+    @admin_required
     def get(self, student_id):
         student = Student.query.get_or_404(student_id)
         return make_response(jsonify(student.to_dict()), 200)
 
-    @jwt_required()
+    @admin_required
     def put(self, student_id):
         data = request.get_json()
         student = Student.query.get_or_404(student_id)
@@ -87,7 +97,7 @@ class StudentManager(Resource):
         db.session.commit()
         return make_response(jsonify(student.to_dict()), 200)
 
-    @jwt_required()
+    @admin_required
     def delete(self, student_id):
         student = Student.query.get_or_404(student_id)
         db.session.delete(student)
@@ -96,6 +106,7 @@ class StudentManager(Resource):
 
 # Fees Management
 class GetStudentFeeBalance(Resource):
+    @admin_required
     def get(self, student_id):
         fee_balance = FeeBalance.query.filter_by(student_id=student_id).first_or_404()
         student = Student.query.get_or_404(student_id)
@@ -110,7 +121,7 @@ class GetStudentFeeBalance(Resource):
         return make_response(jsonify(fee_balance_info), 200)
 
 class FeesManagement(Resource):
-    @jwt_required()
+    @admin_required
     def post(self):
         data = request.get_json()
 
@@ -128,7 +139,7 @@ class FeesManagement(Resource):
         return make_response(new_fee_balance.to_dict(), 200)
 
 class ManageFeeBalance(Resource):
-    @jwt_required()
+    @admin_required
     def put(self, fee_balance_id):
         data = request.get_json()
         balance = FeeBalance.query.get_or_404(fee_balance_id)
@@ -139,7 +150,7 @@ class ManageFeeBalance(Resource):
         db.session.commit()
         return {'msg': 'Updated successfully'}, 200
 
-    @jwt_required()
+    @admin_required
     def delete(self, fee_balance_id):
         balance = FeeBalance.query.get_or_404(fee_balance_id)
         db.session.delete(balance)
@@ -148,12 +159,13 @@ class ManageFeeBalance(Resource):
 
 # Grades Management
 class CreateGrade(Resource):
+    @admin_required
     def get(self):
         grades = Grade.query.all()
         grades_list = [grade.to_dict() for grade in grades]
         return jsonify(grades_list)
 
-    @jwt_required()
+    @admin_required
     def post(self):
         data = request.get_json()
         new_grades = Grade(
@@ -167,14 +179,14 @@ class CreateGrade(Resource):
         return make_response(new_grades.to_dict(), 200)
 
 class SpecificGrade(Resource):
-    @jwt_required()
+    @admin_required
     def get(self, student_id):
         grade = Grade.query.filter_by(student_id=student_id).all()
         grades_list = [g.to_dict() for g in grade]
         return make_response(jsonify(grades_list), 200)
 
 class GradeManager(Resource):
-    @jwt_required()
+    @admin_required
     def put(self, grade_id):
         data = request.get_json()
         grade = Grade.query.get_or_404(grade_id)
@@ -185,7 +197,7 @@ class GradeManager(Resource):
         db.session.commit()
         return {'msg': 'Updated successfully'}, 200
 
-    @jwt_required()
+    @admin_required
     def delete(self, grade_id):
         grade = Grade.query.get_or_404(grade_id)
         db.session.delete(grade)
@@ -193,7 +205,7 @@ class GradeManager(Resource):
         return {'msg': 'Removed successfully'}, 204
 
 class DeleteUsers(Resource):
-    @jwt_required()
+    @admin_required
     def delete(self, user_id):
         user = User.query.get_or_404(user_id)
         db.session.delete(user)
