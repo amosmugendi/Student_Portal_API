@@ -1,8 +1,8 @@
 from flask import Blueprint,make_response,request,jsonify
 from flask_restful import Resource,Api
-from models import Student,User,db,FeeBalance,Grade
+from models import Student,User,db,FeeBalance,Grade,Admin
 from datetime import datetime
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required,get_jwt_identity
 from flask_bcrypt import Bcrypt
 
 admin_bp = Blueprint('admin_bp',__name__,url_prefix='/admin')
@@ -177,6 +177,72 @@ class GradeManager(Resource):
         db.session.commit()
         return {'msg':'Removed successfully'}
 
+#Admin Management
+class CreateAdmin(Resource):
+    jwt_required()
+    def post(self):
+        data = request.get_json()
+
+        # Ensure all required fields are provided
+        required_fields = ['username', 'email', 'password', 'role', 'first_name', 'last_name']
+        for field in required_fields:
+            if field not in data:
+                return make_response(jsonify({"msg": f"Missing required field: {field}"}), 400)
+
+        # Check if username or email already exists
+        if check_user_exists(data['username'], data['email']):
+            return make_response(jsonify({"msg": "Username or email already exists"}), 409)
+
+        # Hash the password
+        hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+
+        # Create new User
+        try:
+            new_user = User(
+                username=data.get('username'),
+                email=data.get('email'),
+                password_hash=hashed_password,
+                role=data.get('role')
+            )
+            db.session.add(new_user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return make_response(jsonify({"msg": f"Error creating user: {str(e)}"}), 500)
+
+        # Create new Admin
+        try:
+            new_admin = Admin(
+                user_id=new_user.id,
+                first_name=data.get('first_name'),
+                last_name=data.get('last_name'),
+            )
+            db.session.add(new_admin)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return make_response(jsonify({"msg": f"Error creating admin: {str(e)}"}), 500)
+
+        return make_response(jsonify(new_admin.to_dict()), 201)
+    
+class AdminManager(Resource):
+    jwt_required()
+    def put(self,admin_id):
+        data = request.get_json()
+        admin = Admin.query.get_or_404(admin_id)
+        admin.user_id = data.get('user_id')
+        admin.first_name= data.get('first_name')
+        admin.second_name = data.get('second_name')
+        db.session.commit()
+        return {'msg':'Upgraded successfully'}
+    
+    jwt_required()
+    def delete(self,admin_id):
+        admin = Admin.query.get_or_404(admin_id)
+        db.session.delete(admin)
+        db.session.commit()
+        return {"msg" : "Removed Successfully"}
+
 
 class DeleteUsers(Resource):
     jwt_required()
@@ -184,7 +250,7 @@ class DeleteUsers(Resource):
         user = User.query.get_or_404(user_id)
         db.session.delete(user)
         db.session.commit()
-        return {'msg':'User {user_id} removed successfuly'}
+        return {'msg': f'User {user_id} removed successfuly'}
     
 
     
@@ -197,3 +263,5 @@ admin_api.add_resource(DeleteUsers, '/deleteusers/<int:user_id>')
 admin_api.add_resource(CreateGrade, '/addgrades')
 admin_api.add_resource(SpecificGrade, '/studentgrade/<int:student_id>')
 admin_api.add_resource(GradeManager, '/managegrades/<int:grade_id>')
+admin_api.add_resource(CreateAdmin, '/createadmin')
+admin_api.add_resource(AdminManager, '/managemadmins/<int:admin_id>')
