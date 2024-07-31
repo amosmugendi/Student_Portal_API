@@ -1,6 +1,6 @@
 from flask import Blueprint,make_response,request,jsonify
 from flask_restful import Resource,Api
-from models import Student,User,db,FeeBalance
+from models import Student,User,db,FeeBalance,Grade
 from datetime import datetime
 from flask_jwt_extended import jwt_required
 from flask_bcrypt import Bcrypt
@@ -13,6 +13,7 @@ def check_user_exists(username, email):
     existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
     return existing_user is not None
 
+#Student Management
 class CreateStudent(Resource):
     @jwt_required()
     def post(self):
@@ -76,6 +77,7 @@ class DeleteStudent(Resource):
         db.session.commit()
         return 'Student removed from the database',204
 
+#Fees Management
 class GetStudentFeeBalance(Resource):
     def get(self,student_id):
         fee_balance = FeeBalance.query.get_or_404(student_id)
@@ -107,13 +109,59 @@ class DeleteFeeBalance(Resource):
         db.session.commit()
         return 'Balance removed'
 
+#Grades Management
+class CreateGrade(Resource):
+    def get(self):
+        grades = Grade.query.all()
+        grades_list = [grade.to_dict() for grade in grades]
+        return  jsonify(grades_list)
+    
+    jwt_required()
+    def post(self):
+        data = request.get_json()
+        new_grades = Grade(
+            student_id = data.get('student_id'),
+            course_name = data.get('course_name'),
+            grade = data.get('grade'),
+            term = data.get('term')
+        )
+        db.session.add(new_grades)
+        db.session.commit()
+        return make_response(new_grades.to_dict(), 200)
+
+class SpecificGrade(Resource):
+    jwt_required()
+    def get(self,student_id):
+        grade = Grade.query.get_or_404(student_id)
+        return make_response(grade.to_dict(), 200)
+    
+class GradeManager(Resource):
+    jwt_required()
+    def put(self, grade_id):
+        data = request.get_json()
+        grade = Grade.query.get_or_404(grade_id)
+        grade.student_id = data.get('student_id')
+        grade.course_name= data.get('course_name')
+        grade.grade = data.get('grade')
+        grade.term = data.get('term')
+        db.session.commit()
+        return {'msg':'Upgraded successfully'}
+
+    jwt_required()
+    def delete(self, grade_id):
+        grade = Grade.query.get_or_404(grade_id)
+        db.session.delete(grade)
+        db.session.commit()
+        return {'msg':'Removed successfully'}
+
+
 class DeleteUsers(Resource):
     jwt_required()
     def delete(self,user_id):
         user = User.query.get_or_404(user_id)
         db.session.delete(user)
         db.session.commit()
-        return f'User {user_id} removed successfuly'
+        return {'msg':'User {user_id} removed successfuly'}
     
 
     
@@ -123,3 +171,6 @@ admin_api.add_resource(GetStudentFeeBalance, '/feebalance/<int:student_id>')
 admin_api.add_resource(DeleteFeeBalance, '/deletebalance/<int:fee_balance_id>')
 admin_api.add_resource(FeesManagement, '/fees')
 admin_api.add_resource(DeleteUsers, '/deleteusers/<int:user_id>')
+admin_api.add_resource(CreateGrade, '/addgrades')
+admin_api.add_resource(SpecificGrade, '/studentgrade/<int:student_id>')
+admin_api.add_resource(GradeManager, '/managegrades/<int:grade_id>')
