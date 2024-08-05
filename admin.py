@@ -1,11 +1,11 @@
-from flask import Blueprint,make_response,request,jsonify
-from flask_restful import Resource,Api
-from models import Student,User,db,FeeBalance,Grade,Admin,Course,Unit,CourseUnit
+from flask import Blueprint, make_response, request, jsonify
+from flask_restful import Resource, Api
+from models import Student, User, db, FeeBalance, Grade, Admin, Course, Unit, CourseUnit
 from datetime import datetime
-from flask_jwt_extended import jwt_required,get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
 
-admin_bp = Blueprint('admin_bp',__name__,url_prefix='/admin')
+admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
 bcrypt = Bcrypt()
 admin_api = Api(admin_bp)
 
@@ -13,7 +13,7 @@ def check_user_exists(username, email):
     existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
     return existing_user is not None
 
-#Student Management
+# Student Management
 class CreateStudent(Resource):
     @jwt_required()
     def post(self):
@@ -72,7 +72,7 @@ class CreateStudent(Resource):
 
 class StudentManager(Resource):
     @jwt_required()
-    def put(self,student_id):
+    def put(self, student_id):
         data = request.get_json()
         student = Student.query.get_or_404(student_id)
         student.user_id = data.get('user_id')
@@ -85,15 +85,15 @@ class StudentManager(Resource):
         return make_response(student.to_dict(), 200)
 
     @jwt_required()
-    def delete(self,student_id):
+    def delete(self, student_id):
         student = Student.query.get_or_404(student_id)
         db.session.delete(student)
         db.session.commit()
-        return 'Student removed from the database',204
+        return 'Student removed from the database', 204
 
-#Fees Management
+# Fees Management
 class GetStudentFeeBalance(Resource):
-    def get(self,student_id):
+    def get(self, student_id):
         fee_balance = FeeBalance.query.get_or_404(student_id)
         return make_response(fee_balance.to_dict(), 200)
 
@@ -105,10 +105,10 @@ class FeesManagement(Resource):
         due_date = datetime.strptime(data.get('due_date'), '%Y-%m-%d').date()
 
         new_fee_balance = FeeBalance(
-        student_id = data.get('student_id'),
-        amount_due = data.get('amount_due'),
-        amount_paid = data.get('amount_paid'),
-        due_date = due_date
+            student_id=data.get('student_id'),
+            amount_due=data.get('amount_due'),
+            amount_paid=data.get('amount_paid'),
+            due_date=due_date
         )
 
         db.session.add(new_fee_balance)
@@ -125,7 +125,7 @@ class ManageFeeBalance(Resource):
         balance.amount_paid = data.get('amount_paid')
         balance.due_date = datetime.strptime(data.get('due_date'), '%Y-%m-%d')
         db.session.commit()
-        return {'msg' : 'Updated successfuly'},200
+        return {'msg': 'Updated successfully'}, 200
     
     @jwt_required()
     def delete(self, fee_balance_id):
@@ -134,21 +134,21 @@ class ManageFeeBalance(Resource):
         db.session.commit()
         return 'Balance removed'
 
-#Grades Management
+# Grades Management
 class CreateGrade(Resource):
     def get(self):
         grades = Grade.query.all()
         grades_list = [grade.to_dict() for grade in grades]
-        return  jsonify(grades_list)
+        return jsonify(grades_list)
     
     @jwt_required()
     def post(self):
         data = request.get_json()
         new_grades = Grade(
-            student_id = data.get('student_id'),
-            course_unit_id = data.get('course_unit_id'),
-            grade = data.get('grade'),
-            phase = data.get('phase')
+            student_id=data.get('student_id'),
+            course_unit_id=data.get('course_unit_id'),
+            grade=data.get('grade'),
+            phase=data.get('phase')
         )
         db.session.add(new_grades)
         db.session.commit()
@@ -156,7 +156,7 @@ class CreateGrade(Resource):
 
 class SpecificGrade(Resource):
     @jwt_required()
-    def get(self,student_id):
+    def get(self, student_id):
         grade = Grade.query.get_or_404(student_id)
         return make_response(grade.to_dict(), 200)
     
@@ -166,20 +166,20 @@ class GradeManager(Resource):
         data = request.get_json()
         grade = Grade.query.get_or_404(grade_id)
         grade.student_id = data.get('student_id')
-        grade.course_unit_id= data.get('course_unit_id')
+        grade.course_unit_id = data.get('course_unit_id')
         grade.grade = data.get('grade')
         grade.phase = data.get('phase')
         db.session.commit()
-        return {'msg':'Upgraded successfully'}
+        return {'msg': 'Upgraded successfully'}
 
     @jwt_required()
     def delete(self, grade_id):
         grade = Grade.query.get_or_404(grade_id)
         db.session.delete(grade)
         db.session.commit()
-        return {'msg':'Removed successfully'}
+        return {'msg': 'Removed successfully'}
 
-#Admin Management
+# Admin Management
 class CreateAdmin(Resource):
     def post(self):
         data = request.get_json()
@@ -228,33 +228,31 @@ class CreateAdmin(Resource):
     
 class AdminManager(Resource):
     @jwt_required()
-    def put(self,admin_id):
+    def put(self, admin_id):
         data = request.get_json()
         admin = Admin.query.get_or_404(admin_id)
         admin.user_id = data.get('user_id')
-        admin.first_name= data.get('first_name')
+        admin.first_name = data.get('first_name')
         admin.second_name = data.get('second_name')
         db.session.commit()
-        return {'msg':'Upgraded successfully'}
+        return {'msg': 'Upgraded successfully'}
     
     @jwt_required()
-    def delete(self,admin_id):
+    def delete(self, admin_id):
         admin = Admin.query.get_or_404(admin_id)
         db.session.delete(admin)
         db.session.commit()
-        return {"msg" : "Removed Successfully"}
-
+        return {"msg": "Removed Successfully"}
 
 class DeleteUsers(Resource):
     @jwt_required()
-    def delete(self,user_id):
+    def delete(self, user_id):
         user = User.query.get_or_404(user_id)
         db.session.delete(user)
         db.session.commit()
         return {'msg': f'User {user_id} removed successfully'}
     
-
-#Course Management
+# Course Management
 class CourseResource(Resource):
     def get(self):
         courses = Course.query.all()
@@ -265,32 +263,31 @@ class CourseResource(Resource):
     def post(self):
         data = request.get_json()
         new_course = Course(
-            course_name = data.get('course_name'),
-            fee = data.get('fee')
+            course_name=data.get('name'),
+            fee=data.get('fee')
         )
         db.session.add(new_course)
         db.session.commit()
-        return make_response(new_course.to_dict(),200)
+        return make_response(new_course.to_dict(), 200)
 
 class CourseManager(Resource):
     @jwt_required()
-    def put(self,course_id):
+    def put(self, course_id):
         data = request.get_json()
         course = Course.query.get_or_404(course_id)
-        course.course_name = data.get('course_name')
+        course.course_name = data.get('name')
         course.fee = data.get('fee')
         db.session.commit()
-        return {'msg' : 'Updated successfully'}
+        return {'msg': 'Updated successfully'}
     
     @jwt_required()
-    def delete(self,course_id):
+    def delete(self, course_id):
         course = Course.query.get_or_404(course_id)
         db.session.delete(course)
         db.session.commit()
-        return {'msg' : f'Course of id {course_id} has been removed'}
+        return {'msg': f'Course with id {course_id} has been removed'}
 
-
-#Unit Management
+# Unit Management
 class UnitResource(Resource):
     def get(self):
         units = Unit.query.all()
@@ -301,48 +298,47 @@ class UnitResource(Resource):
     def post(self):
         data = request.get_json()
         new_unit = Unit(
-            name = data.get('name'),
+            unit_name=data.get('unit_name')
         )
         db.session.add(new_unit)
         db.session.commit()
-        return make_response(new_unit.to_dict(),200)
+        return make_response(new_unit.to_dict(), 200)
 
 class UnitManager(Resource):
     @jwt_required()
-    def put(self,unit_id):
+    def put(self, unit_id):
         data = request.get_json()
         unit = Unit.query.get_or_404(unit_id)
-        unit.name = data.get('name')
+        unit.unit_name = data.get('unit_name')
         db.session.commit()
-        return {'msg' : 'Updated successfully'}
+        return {'msg': 'Updated successfully'}
     
     @jwt_required()
-    def delete(self,unit_id):
+    def delete(self, unit_id):
         unit = Unit.query.get_or_404(unit_id)
         db.session.delete(unit)
         db.session.commit()
-        return {'msg' : f'Course of id {unit_id} has been removed'}
+        return {'msg': f'Unit with id {unit_id} has been removed'}
 
-
-#Course_Unit
+# CourseUnit Management
 class CourseUnitResource(Resource):
     def get(self):
         course_units = CourseUnit.query.all()
-        course_unit_list = [course_unit.to_dict() for course_unit in course_units]
-        return jsonify(course_unit_list)
+        course_units_list = [course_unit.to_dict() for course_unit in course_units]
+        return jsonify(course_units_list)
     
     @jwt_required()
     def post(self):
         data = request.get_json()
         new_course_unit = CourseUnit(
-            course_id = data.get('course_id'),
-            unit_id = data.get('unit_id'),
-            phase = data.get('phase')
+            course_id=data.get('course_id'),
+            unit_id=data.get('unit_id'),
+            phase=data.get('phase')
         )
         db.session.add(new_course_unit)
         db.session.commit()
         return make_response(new_course_unit.to_dict(), 200)
-    
+
 class CourseUnitManager(Resource):
     @jwt_required()
     def put(self, course_unit_id):
@@ -352,30 +348,29 @@ class CourseUnitManager(Resource):
         course_unit.unit_id = data.get('unit_id')
         course_unit.phase = data.get('phase')
         db.session.commit()
-        return {'msg' : 'Updated successfully'}
+        return {'msg': 'Updated successfully'}
     
     @jwt_required()
-    def delete(self,course_unit_id):
+    def delete(self, course_unit_id):
         course_unit = CourseUnit.query.get_or_404(course_unit_id)
         db.session.delete(course_unit)
         db.session.commit()
-        return {'msg':'Removed successfully'}
-    
-    
+        return {'msg': f'CourseUnit with id {course_unit_id} has been removed'}
+
 admin_api.add_resource(CreateStudent, '/create_student')
-admin_api.add_resource(StudentManager, '/studentmanagement/<int:student_id>')
-admin_api.add_resource(GetStudentFeeBalance, '/feebalance/<int:student_id>')
-admin_api.add_resource(ManageFeeBalance, '/managebalance/<int:fee_balance_id>')
-admin_api.add_resource(FeesManagement, '/fees')
-admin_api.add_resource(DeleteUsers, '/deleteusers/<int:user_id>')
-admin_api.add_resource(CreateGrade, '/addgrades')
-admin_api.add_resource(SpecificGrade, '/studentgrade/<int:student_id>')
-admin_api.add_resource(GradeManager, '/managegrades/<int:grade_id>')
-admin_api.add_resource(CreateAdmin, '/createadmin')
-admin_api.add_resource(AdminManager, '/manageadmins/<int:admin_id>')
+admin_api.add_resource(StudentManager, '/manage_student/<int:student_id>')
+admin_api.add_resource(GetStudentFeeBalance, '/fee_balance/<int:student_id>')
+admin_api.add_resource(FeesManagement, '/add_fee_balance')
+admin_api.add_resource(ManageFeeBalance, '/manage_fee_balance/<int:fee_balance_id>')
+admin_api.add_resource(CreateGrade, '/add_grades')
+admin_api.add_resource(SpecificGrade, '/grade/<int:student_id>')
+admin_api.add_resource(GradeManager, '/manage_grade/<int:grade_id>')
+admin_api.add_resource(CreateAdmin, '/create_admin')
+admin_api.add_resource(AdminManager, '/manage_admin/<int:admin_id>')
+admin_api.add_resource(DeleteUsers, '/remove_user/<int:user_id>')
 admin_api.add_resource(CourseResource, '/courses')
-admin_api.add_resource(CourseManager, '/courses/<int:course_id>')
-admin_api.add_resource(UnitManager, '/units')
-admin_api.add_resource(UnitResource, '/units/<int:unit_id>')
+admin_api.add_resource(CourseManager, '/manage_course/<int:course_id>')
+admin_api.add_resource(UnitResource, '/units')
+admin_api.add_resource(UnitManager, '/manage_unit/<int:unit_id>')
 admin_api.add_resource(CourseUnitResource, '/course_units')
-admin_api.add_resource(CourseUnitManager, '/course_units/<int:course_unit_id>')
+admin_api.add_resource(CourseUnitManager, '/manage_course_unit/<int:course_unit_id>')
