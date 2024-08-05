@@ -181,7 +181,6 @@ class GradeManager(Resource):
 
 #Admin Management
 class CreateAdmin(Resource):
-    @jwt_required()
     def post(self):
         data = request.get_json()
 
