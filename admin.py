@@ -265,7 +265,7 @@ class CourseResource(Resource):
     def post(self):
         data = request.get_json()
         new_course = Course(
-            course_name = data.get('course_name'),
+            name = data.get('name'),
             fee = data.get('fee')
         )
         db.session.add(new_course)
@@ -375,7 +375,7 @@ admin_api.add_resource(CreateAdmin, '/createadmin')
 admin_api.add_resource(AdminManager, '/manageadmins/<int:admin_id>')
 admin_api.add_resource(CourseResource, '/courses')
 admin_api.add_resource(CourseManager, '/courses/<int:course_id>')
-admin_api.add_resource(UnitManager, '/units')
-admin_api.add_resource(UnitResource, '/units/<int:unit_id>')
+admin_api.add_resource(UnitManager, '/units/<int:unit_id>')
+admin_api.add_resource(UnitResource, '/units')
 admin_api.add_resource(CourseUnitResource, '/course_units')
 admin_api.add_resource(CourseUnitManager, '/course_units/<int:course_unit_id>')
