@@ -263,7 +263,7 @@ class CourseResource(Resource):
     def post(self):
         data = request.get_json()
         new_course = Course(
-            course_name=data.get('name'),
+            name=data.get('name'),
             fee=data.get('fee')
             
         )
@@ -299,7 +299,7 @@ class UnitResource(Resource):
     def post(self):
         data = request.get_json()
         new_unit = Unit(
-            unit_name=data.get('unit_name')
+            name=data.get('name')
         )
         db.session.add(new_unit)
         db.session.commit()
