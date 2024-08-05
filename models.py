@@ -40,20 +40,23 @@ class Student(db.Model, SerializerMixin):
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     date_of_birth = db.Column(db.Date, nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
     current_phase = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship('User', back_populates='student')
+    course = db.relationship('Course', back_populates='students')
     grades = db.relationship('Grade', back_populates='student')
     fee_balance = db.relationship('FeeBalance', back_populates='student', uselist=False)
     payments = db.relationship('Payment', back_populates='student', lazy='dynamic')
 
-    def __init__(self, user_id, first_name, last_name, date_of_birth, current_phase):
+    def __init__(self, user_id, first_name, last_name, date_of_birth, course_id, current_phase):
         self.user_id = user_id
         self.first_name = first_name
         self.last_name = last_name
         self.date_of_birth = date_of_birth
+        self.course_id = course_id
         self.current_phase = current_phase
 
     def to_dict(self):
@@ -63,6 +66,7 @@ class Student(db.Model, SerializerMixin):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "date_of_birth": self.date_of_birth.isoformat(),
+            "course_id": self.course_id,
             "current_phase": self.current_phase,
             "created_at": self.created_at,
             "updated_at": self.updated_at
@@ -94,31 +98,89 @@ class Admin(db.Model, SerializerMixin):
             "updated_at": self.updated_at
         }
 
+class Course(db.Model, SerializerMixin):
+    __tablename__ = 'course'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    fee = db.Column(db.Float, nullable=False)
+    students = db.relationship('Student', back_populates='course')
+    phases = db.relationship('CourseUnit', back_populates='course')
+
+    def __init__(self, name, fee):
+        self.name = name
+        self.fee = fee
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "fee": self.fee
+        }
+
+class Unit(db.Model, SerializerMixin):
+    __tablename__ = 'unit'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    courses = db.relationship('CourseUnit', back_populates='unit')
+
+    def __init__(self, name):
+        self.name = name
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name
+        }
+
+class CourseUnit(db.Model, SerializerMixin):
+    __tablename__ = 'course_unit'
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    unit_id = db.Column(db.Integer, db.ForeignKey('unit.id'), nullable=False)
+    phase = db.Column(db.String, nullable=False)
+
+    course = db.relationship('Course', back_populates='phases')
+    unit = db.relationship('Unit', back_populates='courses')
+
+    def __init__(self, course_id, unit_id, phase):
+        self.course_id = course_id
+        self.unit_id = unit_id
+        self.phase = phase
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "unit_id": self.unit_id,
+            "phase": self.phase
+        }
+
 class Grade(db.Model, SerializerMixin):
     __tablename__ = 'grade'
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
-    course_name = db.Column(db.String, nullable=False)
+    course_unit_id = db.Column(db.Integer, db.ForeignKey('course_unit.id'), nullable=False)
     grade = db.Column(db.String, nullable=False)
-    term = db.Column(db.String, nullable=False)
+    phase = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     student = db.relationship('Student', back_populates='grades')
+    course_unit = db.relationship('CourseUnit')
 
-    def __init__(self, student_id, course_name, grade, term):
+    def __init__(self, student_id, course_unit_id, grade, phase):
         self.student_id = student_id
-        self.course_name = course_name
+        self.course_unit_id = course_unit_id
         self.grade = grade
-        self.term = term
+        self.phase = phase
 
     def to_dict(self):
         return {
             "id": self.id,
             "student_id": self.student_id,
-            "course_name": self.course_name,
+            "course_unit_id": self.course_unit_id,
             "grade": self.grade,
-            "term": self.term,
+            "phase": self.phase,
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
