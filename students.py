@@ -68,12 +68,49 @@ def make_payment(student_id):
     amount = data.get('amount')
     transaction_id = data.get('transaction_id')
     
+    if amount <= 0:
+        return jsonify({"message": "Amount must be greater than zero"}), 400
+    
     fee_balance = FeeBalance.query.filter_by(student_id=student.id).first()
     if fee_balance is None:
         return jsonify({"message": "Fee balance not found"}), 404
     
-    fee_balance.amount_paid += amount
+    # Calculate new total amount paid and new amount due
+    new_amount_paid = fee_balance.amount_paid + amount
+    new_amount_due = fee_balance.amount_due - amount
+    
+    # Check if the new total amount paid exceeds the maximum limit
+    max_limit = 200000
+    if new_amount_paid > max_limit:
+        return jsonify({"message": f"Payment exceeds the maximum limit of {max_limit}"}), 400
+    
+    # Ensure that the new amount due is not negative
+    if new_amount_due < 0:
+        return jsonify({"message": "Payment amount exceeds the amount due"}), 400
+    
+    # Update fee balance and add payment record
+    fee_balance.amount_paid = new_amount_paid
+    fee_balance.amount_due = new_amount_due
     db.session.add(Payment(student_id=student.id, amount=amount, transaction_id=transaction_id, payment_date=datetime.utcnow()))
     db.session.commit()
     
     return jsonify(fee_balance.to_dict())
+
+@students_bp.route('/students/<int:student_id>/payments/<int:payment_id>', methods=['DELETE'])
+@jwt_required()
+def delete_payment(student_id, payment_id):
+    student = Student.query.get_or_404(student_id)
+    payment = Payment.query.filter_by(id=payment_id, student_id=student.id).first_or_404()
+    
+    fee_balance = FeeBalance.query.filter_by(student_id=student.id).first()
+    if fee_balance is None:
+        return jsonify({"message": "Fee balance not found"}), 404
+    
+    # Remove the payment from the database
+    db.session.delete(payment)
+    
+    # Adjust the fee balance
+    fee_balance.amount_paid -= payment.amount
+    db.session.commit()
+    
+    return jsonify({"message": "Payment deleted successfully"})
