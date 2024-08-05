@@ -14,6 +14,13 @@ def check_user_exists(username, email):
     return existing_user is not None
 
 #Student Management
+class GetStudents(Resource):
+    @jwt_required()
+    def get(self):
+        students = Student.query.all()
+        student_list = [student.to_dict() for student in students]
+        return jsonify(student_list)
+
 class CreateStudent(Resource):
     @jwt_required()
     def post(self):
@@ -361,7 +368,8 @@ class CourseUnitManager(Resource):
         db.session.commit()
         return {'msg':'Removed successfully'}
     
-    
+
+admin_api.add_resource(GetStudents, '/students')
 admin_api.add_resource(CreateStudent, '/create_student')
 admin_api.add_resource(StudentManager, '/studentmanagement/<int:student_id>')
 admin_api.add_resource(GetStudentFeeBalance, '/feebalance/<int:student_id>')
