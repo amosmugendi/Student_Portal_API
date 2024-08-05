@@ -265,6 +265,7 @@ class CourseResource(Resource):
         new_course = Course(
             course_name=data.get('name'),
             fee=data.get('fee')
+            
         )
         db.session.add(new_course)
         db.session.commit()
@@ -369,8 +370,8 @@ admin_api.add_resource(CreateAdmin, '/create_admin')
 admin_api.add_resource(AdminManager, '/manage_admin/<int:admin_id>')
 admin_api.add_resource(DeleteUsers, '/remove_user/<int:user_id>')
 admin_api.add_resource(CourseResource, '/courses')
-admin_api.add_resource(CourseManager, '/manage_course/<int:course_id>')
+admin_api.add_resource(CourseManager, '/courses/<int:course_id>')
+admin_api.add_resource(UnitManager, '/units/<int:unit_id>')
 admin_api.add_resource(UnitResource, '/units')
-admin_api.add_resource(UnitManager, '/manage_unit/<int:unit_id>')
 admin_api.add_resource(CourseUnitResource, '/course_units')
 admin_api.add_resource(CourseUnitManager, '/manage_course_unit/<int:course_unit_id>')
