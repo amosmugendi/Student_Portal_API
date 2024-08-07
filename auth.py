@@ -1,8 +1,10 @@
-from flask import Blueprint
+from flask import Blueprint, session
 from flask_restful import Api, Resource, reqparse
 from models import User, db
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, JWTManager
+from flask_jwt_extended import (
+    create_access_token, create_refresh_token, jwt_required, get_jwt_identity, JWTManager
+)
 from functools import wraps
 
 auth_bp = Blueprint('auth_bp', __name__, url_prefix='/auth')
@@ -43,7 +45,16 @@ class Login(Resource):
             access_token = create_access_token(identity=user.id)
             refresh_token = create_refresh_token(identity=user.id)
             role = user.role  # Assuming each user has one role
-            return {"access_token": access_token, "refresh_token": refresh_token, "role": role}, 200
+            
+            # Store user_id in session
+            session['user_id'] = user.id
+            
+            return {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "user_id": user.id,
+                "role": role
+            }, 200
         return {"msg": "Invalid credentials"}, 401
 
 class RefreshToken(Resource):
