@@ -2,9 +2,10 @@ from flask import Blueprint, request, jsonify, make_response
 from flask_restful import Resource, Api
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from models import Student, Grade, FeeBalance, Payment, CourseEnrollment, db
+from models import Student, Grade, FeeBalance, Payment, Course, db
 
-students_bp = Blueprint('students_bp', url_prefix='/students')
+# Initialize the Blueprint with the import_name argument
+students_bp = Blueprint('students_bp', __name__, url_prefix='/students')
 students_api = Api(students_bp)
 
 class StudentDashboard(Resource):
@@ -13,15 +14,15 @@ class StudentDashboard(Resource):
         student = Student.query.filter_by(user_id=user_id).first_or_404()
         grades = Grade.query.filter_by(student_id=student.id).all()
         fee_balance = FeeBalance.query.filter_by(student_id=student.id).first()
-        enrolled_courses = CourseEnrollment.query.filter_by(student_id=student.id).all()
         
-        courses = [course.to_dict() for course in enrolled_courses]
+        # Fetch the course information from the Student model
+        enrolled_course = student.course.to_dict() if student.course else None
         
         return jsonify({
             "student": student.to_dict(),
             "grades": [grade.to_dict() for grade in grades],
             "fee_balance": fee_balance.to_dict() if fee_balance else None,
-            "courses": courses,
+            "enrolled_course": enrolled_course,
             "current_phase": student.current_phase
         })
 
