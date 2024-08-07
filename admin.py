@@ -342,6 +342,12 @@ class CourseDetailResource(Resource):
 # Unit Management
 class UnitResource(Resource):
     @jwt_required()
+    def get(self):
+        units = Unit.query.all()
+        units_list = [unit.to_dict() for unit in units]
+        return jsonify(units_list)
+    
+    @jwt_required()
     def post(self):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
