@@ -66,11 +66,12 @@ class Student(db.Model, SerializerMixin):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "date_of_birth": self.date_of_birth.isoformat(),
-            "course_name": self.course.name if self.course else None,
+            "course_name": self.course.name if self.course else None,  # Ensure course name is included
             "current_phase": self.current_phase,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
-            "email": self.user.email if self.user else None
+            "email": self.user.email if self.user else None,  # Ensure user email is included
+            "fee_balance": self.fee_balance.to_dict() if self.fee_balance else None  # Include fee balance details
         }
 
 class Admin(db.Model, SerializerMixin):
