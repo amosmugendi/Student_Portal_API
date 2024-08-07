@@ -82,12 +82,12 @@ class StudentManager(Resource):
     def put(self,student_id):
         data = request.get_json()
         student = Student.query.get_or_404(student_id)
-        student.user_id = data.get('user_id')
+        # student.user_id = data.get('user_id')
         student.first_name = data.get('first_name')
         student.last_name = data.get('last_name')
         student.date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d')
         student.course_id = data.get('course_id')
-        student.current_phase = data.get('current_pahse')
+        student.current_phase = data.get('current_phase')
         db.session.commit()
         return make_response(student.to_dict(), 200)
 

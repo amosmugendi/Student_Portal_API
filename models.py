@@ -66,10 +66,11 @@ class Student(db.Model, SerializerMixin):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "date_of_birth": self.date_of_birth.isoformat(),
-            "course_id": self.course_id,
+            "course_name": self.course.name if self.course else None,
             "current_phase": self.current_phase,
             "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "updated_at": self.updated_at,
+            "email": self.user.email if self.user else None
         }
 
 class Admin(db.Model, SerializerMixin):
@@ -176,13 +177,12 @@ class Grade(db.Model, SerializerMixin):
 
     def to_dict(self):
         return {
-            "id": self.id,
-            "student_id": self.student_id,
-            "course_unit_id": self.course_unit_id,
-            "grade": self.grade,
-            "phase": self.phase,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at
+            'id': self.id,
+            'student_id': self.student_id,
+            'course_unit_id': self.course_unit_id,
+            'course_name': self.course_unit.course.name,
+            'grade': self.grade,
+            'phase': self.phase
         }
 
 class FeeBalance(db.Model, SerializerMixin):
