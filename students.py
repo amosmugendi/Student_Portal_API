@@ -2,35 +2,40 @@ from flask import Blueprint, request, jsonify, make_response
 from flask_restful import Resource, Api
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from models import Student, Grade, FeeBalance, Payment, db
+from models import Student, Grade, FeeBalance, Payment, CourseEnrollment, db
 
-students_bp = Blueprint('students_bp', __name__, url_prefix='/students')
+students_bp = Blueprint('students_bp', url_prefix='/students')
 students_api = Api(students_bp)
 
 class StudentDashboard(Resource):
     @jwt_required()
-    def get(self, student_id):
-        student = Student.query.get_or_404(student_id)
+    def get(self, user_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
         grades = Grade.query.filter_by(student_id=student.id).all()
         fee_balance = FeeBalance.query.filter_by(student_id=student.id).first()
+        enrolled_courses = CourseEnrollment.query.filter_by(student_id=student.id).all()
+        
+        courses = [course.to_dict() for course in enrolled_courses]
+        
         return jsonify({
             "student": student.to_dict(),
             "grades": [grade.to_dict() for grade in grades],
             "fee_balance": fee_balance.to_dict() if fee_balance else None,
+            "courses": courses,
             "current_phase": student.current_phase
         })
 
 class StudentGrades(Resource):
     @jwt_required()
-    def get(self, student_id):
-        student = Student.query.get_or_404(student_id)
+    def get(self, user_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
         grades = Grade.query.filter_by(student_id=student.id).all()
         return jsonify([grade.to_dict() for grade in grades])
 
 class StudentFees(Resource):
     @jwt_required()
-    def get(self, student_id):
-        student = Student.query.get_or_404(student_id)
+    def get(self, user_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
         fee_balance = FeeBalance.query.filter_by(student_id=student.id).first()
         if fee_balance is None:
             return jsonify({"message": "Fee balance not found"}), 404
@@ -38,14 +43,14 @@ class StudentFees(Resource):
 
 class StudentPhase(Resource):
     @jwt_required()
-    def get(self, student_id):
-        student = Student.query.get_or_404(student_id)
+    def get(self, user_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
         return jsonify({"current_phase": student.current_phase})
 
 class StudentProfile(Resource):
     @jwt_required()
-    def put(self, student_id):
-        student = Student.query.get_or_404(student_id)
+    def put(self, user_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
         data = request.get_json()
         
         if 'first_name' in data:
@@ -62,8 +67,8 @@ class StudentProfile(Resource):
 
 class StudentPayments(Resource):
     @jwt_required()
-    def post(self, student_id):
-        student = Student.query.get_or_404(student_id)
+    def post(self, user_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
         data = request.get_json()
         
         amount = data.get('amount')
@@ -99,8 +104,8 @@ class StudentPayments(Resource):
 
 class DeletePayment(Resource):
     @jwt_required()
-    def delete(self, student_id, payment_id):
-        student = Student.query.get_or_404(student_id)
+    def delete(self, user_id, payment_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
         payment = Payment.query.filter_by(id=payment_id, student_id=student.id).first_or_404()
         
         fee_balance = FeeBalance.query.filter_by(student_id=student.id).first()
@@ -116,10 +121,10 @@ class DeletePayment(Resource):
         
         return jsonify({"message": "Payment deleted successfully"})
 
-students_api.add_resource(StudentDashboard, '/<int:student_id>/dashboard')
-students_api.add_resource(StudentGrades, '/<int:student_id>/grades')
-students_api.add_resource(StudentFees, '/<int:student_id>/fees')
-students_api.add_resource(StudentPhase, '/<int:student_id>/phase')
-students_api.add_resource(StudentProfile, '/<int:student_id>/profile')
-students_api.add_resource(StudentPayments, '/<int:student_id>/payments')
-students_api.add_resource(DeletePayment, '/<int:student_id>/payments/<int:payment_id>')
+students_api.add_resource(StudentDashboard, '/<int:user_id>/dashboard')
+students_api.add_resource(StudentGrades, '/<int:user_id>/grades')
+students_api.add_resource(StudentFees, '/<int:user_id>/fees')
+students_api.add_resource(StudentPhase, '/<int:user_id>/phase')
+students_api.add_resource(StudentProfile, '/<int:user_id>/profile')
+students_api.add_resource(StudentPayments, '/<int:user_id>/payments')
+students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_id>')
