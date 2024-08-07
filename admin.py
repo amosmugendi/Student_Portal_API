@@ -36,20 +36,16 @@ class CreateStudent(Resource):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         data = request.get_json()
-        # Ensure all required fields are provided
         required_fields = ['username', 'email', 'password', 'role', 'first_name', 'last_name', 'date_of_birth', 'current_phase']
         for field in required_fields:
             if field not in data:
                 return make_response(jsonify({"msg": f"Missing required field: {field}"}), 400)
 
-        # Check if username or email already exists
         if check_user_exists(data['username'], data['email']):
             return make_response(jsonify({"msg": "Username or email already exists"}), 409)
 
-        # Hash the password
         hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
 
-        # Create new User
         try:
             new_user = User(
                 username=data.get('username'),
@@ -63,13 +59,11 @@ class CreateStudent(Resource):
             db.session.rollback()
             return make_response(jsonify({"msg": f"Error creating user: {str(e)}"}), 500)
 
-        # Convert date_of_birth string to date object
         try:
             date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d').date()
         except ValueError:
             return make_response(jsonify({"msg": "Invalid date format for date_of_birth. Use YYYY-MM-DD."}), 400)
 
-        # Create new Student
         try:
             new_student = Student(
                 user_id=new_user.id,
@@ -94,7 +88,6 @@ class StudentManager(Resource):
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         data = request.get_json()
         student = Student.query.get_or_404(student_id)
-        # student.user_id = data.get('user_id')
         student.first_name = data.get('first_name')
         student.last_name = data.get('last_name')
         student.date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d')
@@ -167,7 +160,7 @@ class CreateGrade(Resource):
     def get(self):
         grades = Grade.query.all()
         grades_list = [grade.to_dict() for grade in grades]
-        return  jsonify(grades_list)
+        return jsonify(grades_list)
     
     @jwt_required()
     def post(self):
@@ -204,7 +197,7 @@ class GradeManager(Resource):
         grade.grade = data.get('grade')
         grade.phase = data.get('phase')
         db.session.commit()
-        return {'msg': 'Upgraded successfully'}
+        return {'msg': 'Updated successfully'}
 
     @jwt_required()
     def delete(self, grade_id):
@@ -222,20 +215,16 @@ class CreateAdmin(Resource):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         data = request.get_json()
-        # Ensure all required fields are provided
         required_fields = ['username', 'email', 'password', 'role', 'first_name', 'last_name']
         for field in required_fields:
             if field not in data:
                 return make_response(jsonify({"msg": f"Missing required field: {field}"}), 400)
 
-        # Check if username or email already exists
         if check_user_exists(data['username'], data['email']):
             return make_response(jsonify({"msg": "Username or email already exists"}), 409)
 
-        # Hash the password
         hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
 
-        # Create new User
         try:
             new_user = User(
                 username=data.get('username'),
@@ -249,20 +238,14 @@ class CreateAdmin(Resource):
             db.session.rollback()
             return make_response(jsonify({"msg": f"Error creating user: {str(e)}"}), 500)
 
-        # Create new Admin
-        try:
-            new_admin = Admin(
-                user_id=new_user.id,
-                first_name=data.get('first_name'),
-                last_name=data.get('last_name'),
-            )
-            db.session.add(new_admin)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            return make_response(jsonify({"msg": f"Error creating admin: {str(e)}"}), 500)
-
-        return make_response(jsonify(new_admin.to_dict()), 201)
+        new_admin = Admin(
+            user_id=new_user.id,
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name')
+        )
+        db.session.add(new_admin)
+        db.session.commit()
+        return make_response(new_admin.to_dict(), 201)
 
 class AdminManager(Resource):
     @jwt_required()
@@ -271,11 +254,10 @@ class AdminManager(Resource):
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         data = request.get_json()
         admin = Admin.query.get_or_404(admin_id)
-        admin.user_id = data.get('user_id')
         admin.first_name = data.get('first_name')
-        admin.second_name = data.get('second_name')
+        admin.last_name = data.get('last_name')
         db.session.commit()
-        return {'msg': 'Upgraded successfully'}
+        return make_response(admin.to_dict(), 200)
 
     @jwt_required()
     def delete(self, admin_id):
@@ -284,7 +266,7 @@ class AdminManager(Resource):
         admin = Admin.query.get_or_404(admin_id)
         db.session.delete(admin)
         db.session.commit()
-        return {"msg": "Removed Successfully"}
+        return 'Admin removed from the database', 204
 
 class DeleteUsers(Resource):
     @jwt_required()
@@ -294,14 +276,16 @@ class DeleteUsers(Resource):
         user = User.query.get_or_404(user_id)
         db.session.delete(user)
         db.session.commit()
-        return {'msg': f'User {user_id} removed successfully'}
+        return 'User removed from the database', 204
 
 # Course Management
 class CourseResource(Resource):
     @jwt_required()
     def get(self):
+        if not check_admin_role():
+            return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         courses = Course.query.all()
-        courses_list = [course.to_dict() for course in courses]
+        courses_list = [{'course_id': course.id, 'name': course.name} for course in courses]
         return jsonify(courses_list)
     
     @jwt_required()
@@ -343,8 +327,10 @@ class CourseDetailResource(Resource):
 class UnitResource(Resource):
     @jwt_required()
     def get(self):
+        if not check_admin_role():
+            return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         units = Unit.query.all()
-        units_list = [unit.to_dict() for unit in units]
+        units_list = [{'unit_id': unit.id, 'name': unit.name} for unit in units]
         return jsonify(units_list)
     
     @jwt_required()
@@ -383,6 +369,23 @@ class UnitDetailResource(Resource):
 
 # Course Unit Management
 class CourseUnitResource(Resource):
+    @jwt_required()
+    def get(self):
+        if not check_admin_role():
+            return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        course_units = CourseUnit.query.all()
+        course_units_list = []
+        for course_unit in course_units:
+            course = Course.query.get(course_unit.course_id)
+            unit = Unit.query.get(course_unit.unit_id)
+            course_units_list.append({
+                'course_name': course.name if course else None,
+                'unit_name': unit.name if unit else None,
+                'duration': course.duration if course else None,
+                'fees': course.fee if course else None
+            })
+        return jsonify(course_units_list)
+    
     @jwt_required()
     def post(self):
         if not check_admin_role():
@@ -427,13 +430,14 @@ class AdminDetails(Resource):
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         admin = Admin.query.filter_by(user_id=user_id).first_or_404()
         return make_response(admin.to_dict(), 200)
+
 class StudentCount(Resource):
     @jwt_required()
     def get(self):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
         student_count = Student.query.count()
-        return make_response({"student_count": student_count}, 200)
+        return jsonify({'student_count': student_count})
 
 admin_api.add_resource(GetStudents, '/students')
 admin_api.add_resource(CreateStudent, '/students/create')
