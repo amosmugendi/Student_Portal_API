@@ -91,6 +91,7 @@ class StudentPayments(Resource):
         
         amount = data.get('amount')
         transaction_id = data.get('transaction_id')
+        description = data.get('description')  # Get the description field
         
         if amount <= 0:
             return jsonify({"message": "Amount must be greater than zero"}), 400
@@ -115,7 +116,14 @@ class StudentPayments(Resource):
         # Update fee balance and add payment record
         fee_balance.amount_paid = new_amount_paid
         fee_balance.amount_due = new_amount_due
-        db.session.add(Payment(student_id=student.id, amount=amount, transaction_id=transaction_id, payment_date=datetime.utcnow()))
+        payment = Payment(
+            student_id=student.id, 
+            amount=amount, 
+            transaction_id=transaction_id, 
+            payment_date=datetime.utcnow(),
+            description=description  # Include description in the Payment instance
+        )
+        db.session.add(payment)
         db.session.commit()
         
         return jsonify(fee_balance.to_dict())
@@ -139,6 +147,23 @@ class DeletePayment(Resource):
         
         return jsonify({"message": "Payment deleted successfully"})
 
+class StudentTransactionHistory(Resource):
+    @jwt_required()
+    def get(self, user_id):
+        student = Student.query.filter_by(user_id=user_id).first_or_404()
+        payments = Payment.query.filter_by(student_id=student.id).all()
+
+        if not payments:
+            return jsonify({"message": "No transaction history found"}), 404
+
+        transactions = [{
+            "payment_date": payment.payment_date.isoformat(),
+            "description": payment.description,
+            "amount": payment.amount
+        } for payment in payments]
+
+        return jsonify(transactions)
+
 students_api.add_resource(StudentDashboard, '/<int:user_id>/dashboard')
 students_api.add_resource(StudentGrades, '/<int:user_id>/grades')
 students_api.add_resource(StudentFees, '/<int:user_id>/fees')
@@ -147,3 +172,4 @@ students_api.add_resource(StudentProfile, '/<int:user_id>/profile')
 students_api.add_resource(StudentPayments, '/<int:user_id>/payments')
 students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_id>')
 students_api.add_resource(GetStudentPayments, '/payments')
+students_api.add_resource(StudentTransactionHistory, '/<int:user_id>/transaction_history')

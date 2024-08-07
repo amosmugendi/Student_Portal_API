@@ -228,16 +228,30 @@ class Payment(db.Model, SerializerMixin):
     amount = db.Column(db.Float, nullable=False)
     payment_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     transaction_id = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=True)  # Add description column
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     student = db.relationship('Student', back_populates='payments')
 
-    def __init__(self, student_id, amount, payment_date, transaction_id):
+    def __init__(self, student_id, amount, payment_date, transaction_id, description=None):
         self.student_id = student_id
         self.amount = amount
         self.payment_date = payment_date
         self.transaction_id = transaction_id
+        self.description = description  # Initialize description
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "student_id": self.student_id,
+            "amount": self.amount,
+            "payment_date": self.payment_date.isoformat(),
+            "transaction_id": self.transaction_id,
+            "description": self.description,  # Include description in the dictionary
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
 
     def to_dict(self):
         return {
