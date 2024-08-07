@@ -164,6 +164,12 @@ class ManageFeeBalance(Resource):
 # Grades Management
 class CreateGrade(Resource):
     @jwt_required()
+    def get(self):
+        grades = Grade.query.all()
+        grades_list = [grade.to_dict() for grade in grades]
+        return  jsonify(grades_list)
+    
+    @jwt_required()
     def post(self):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
@@ -292,6 +298,12 @@ class DeleteUsers(Resource):
 
 # Course Management
 class CourseResource(Resource):
+    @jwt_required()
+    def get(self):
+        courses = Course.query.all()
+        courses_list = [course.to_dict() for course in courses]
+        return jsonify(courses_list)
+    
     @jwt_required()
     def post(self):
         if not check_admin_role():
