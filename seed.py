@@ -12,15 +12,15 @@ def seed_data():
         db.create_all()
 
         # Create Courses
-        course1 = Course(name='Computer Science', fee=150000)
-        course2 = Course(name='Information Technology', fee=140000)
+        course1 = Course(name='Computer Science', fee=150000, duration=6)
+        course2 = Course(name='Information Technology', fee=140000, duration=4)
         db.session.add_all([course1, course2])
         db.session.commit()
 
         # Create Units
-        unit1 = Unit(name='Data Structures')
-        unit2 = Unit(name='Algorithms')
-        unit3 = Unit(name='Database Systems')
+        unit1 = Unit(name='Data Structures', description='Fundamentals of data organization')
+        unit2 = Unit(name='Algorithms', description='Design and analysis of algorithms')
+        unit3 = Unit(name='Database Systems', description='Introduction to database systems')
         db.session.add_all([unit1, unit2, unit3])
         db.session.commit()
 

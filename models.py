@@ -104,33 +104,39 @@ class Course(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     fee = db.Column(db.Float, nullable=False)
+    duration = db.Column(db.String, nullable=False)
     students = db.relationship('Student', back_populates='course')
     phases = db.relationship('CourseUnit', back_populates='course')
 
-    def __init__(self, name, fee):
+    def __init__(self, name, fee, duration):
         self.name = name
         self.fee = fee
+        self.duration = duration
 
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
-            "fee": self.fee
+            "fee": self.fee,
+            "duration": self.duration
         }
 
 class Unit(db.Model, SerializerMixin):
     __tablename__ = 'unit'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=False)
     courses = db.relationship('CourseUnit', back_populates='unit')
 
-    def __init__(self, name):
+    def __init__(self, name, description):
         self.name = name
+        self.description = description
 
     def to_dict(self):
         return {
             "id": self.id,
-            "name": self.name
+            "name": self.name,
+            "description": self.description
         }
 
 class CourseUnit(db.Model, SerializerMixin):

@@ -311,7 +311,8 @@ class CourseResource(Resource):
         data = request.get_json()
         new_course = Course(
             name=data.get('name'),
-            description=data.get('description')
+            fee=data.get('fee'),
+            duration=data.get('duration')
         )
         db.session.add(new_course)
         db.session.commit()
@@ -325,7 +326,7 @@ class CourseDetailResource(Resource):
         data = request.get_json()
         course = Course.query.get_or_404(course_id)
         course.name = data.get('name')
-        course.description = data.get('description')
+        course.duration = data.get('duration')
         db.session.commit()
         return make_response(course.to_dict(), 200)
 
@@ -340,6 +341,12 @@ class CourseDetailResource(Resource):
 
 # Unit Management
 class UnitResource(Resource):
+    @jwt_required()
+    def get(self):
+        units = Unit.query.all()
+        units_list = [unit.to_dict() for unit in units]
+        return jsonify(units_list)
+    
     @jwt_required()
     def post(self):
         if not check_admin_role():
