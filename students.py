@@ -66,6 +66,23 @@ class StudentProfile(Resource):
         db.session.commit()
         return jsonify(student.to_dict())
 
+class GetStudentPayments(Resource):
+    @jwt_required()
+    def get(self):
+        current_student_id = get_jwt_identity()
+        student = Student.query.get(current_student_id)
+        
+        if not student:
+            return {"msg": "Student not found"}, 404
+
+        payments = Payment.query.filter_by(student_id=current_student_id).all()
+        
+        if not payments:
+            return {"msg": "No payments found for this student"}, 200
+
+        payments_list = [payment.to_dict() for payment in payments]
+        return jsonify(payments_list)
+    
 class StudentPayments(Resource):
     @jwt_required()
     def post(self, user_id):
@@ -129,3 +146,4 @@ students_api.add_resource(StudentPhase, '/<int:user_id>/phase')
 students_api.add_resource(StudentProfile, '/<int:user_id>/profile')
 students_api.add_resource(StudentPayments, '/<int:user_id>/payments')
 students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_id>')
+students_api.add_resource(GetStudentPayments, '/payments')
