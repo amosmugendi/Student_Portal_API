@@ -69,9 +69,12 @@ class Student(db.Model, SerializerMixin):
             "course_id": self.course_id,
             "current_phase": self.current_phase,
             "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "updated_at": self.updated_at,
+            "email": self.user.email,  # Include email from related User model
+            "fee_balance": self.fee_balance.to_dict() if self.fee_balance else None  # Include fee balance details
         }
 
+        
 class Admin(db.Model, SerializerMixin):
     __tablename__ = 'admin'
     id = db.Column(db.Integer, primary_key=True)
