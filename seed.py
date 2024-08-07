@@ -60,8 +60,10 @@ def seed_data():
         db.session.commit()
 
         # Create Payments
-        payment1 = Payment(student_id=student1.id, amount=75000, payment_date=datetime.utcnow(), transaction_id='txn_001')
-        db.session.add(payment1)
+        payment1 = Payment(student_id=student1.id, amount=75000, payment_date=datetime.utcnow(), transaction_id='txn_001', description='Fees')
+        payment2 = Payment(student_id=student1.id, amount=500, payment_date=datetime.utcnow(), transaction_id='txn_002', description='Library Fine')
+        payment3 = Payment(student_id=student1.id, amount=50000, payment_date=datetime.utcnow(), transaction_id='txn_003', description='Scholarship')
+        db.session.add_all([payment1, payment2, payment3])
         db.session.commit()
 
         print("Database seeded successfully!")
