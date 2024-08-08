@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, make_response
 from flask_restful import Resource, Api
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from models import Student, Grade, FeeBalance, Payment, Course, db
+from models import Student, Grade, FeeBalance, Payment, Course, CourseUnit, Unit, db
 
 # Initialize the Blueprint with the import_name argument
 students_bp = Blueprint('students_bp', __name__, url_prefix='/students')
@@ -163,6 +163,38 @@ class StudentTransactionHistory(Resource):
         } for payment in payments]
 
         return jsonify(transactions)
+    
+
+class UnitsByCourseResource(Resource):
+    @jwt_required()  # Requires the user to be logged in
+    def get(self):
+        # Get the logged-in user's identity (e.g., user ID)
+        user_id = get_jwt_identity()
+        
+        # Fetch the user from the database (assuming user model is Student)
+        student = Student.query.get(user_id)
+        
+        if not student:
+            return {"error": "User not found"}, 404
+        
+        # Get the course_id associated with the logged-in user
+        course_id = student.course_id
+        
+        if not course_id:
+            return {"error": "No course associated with this user"}, 404
+        
+        # Query to get all units associated with the user's course
+        units = (db.session.query(Unit)
+                 .join(CourseUnit, Unit.id == CourseUnit.unit_id)
+                 .filter(CourseUnit.course_id == course_id)
+                 .all())
+        
+        # Serialize the units
+        unit_data = [unit.to_dict() for unit in units]
+        
+        return unit_data, 200
+
+
 
 students_api.add_resource(StudentDashboard, '/<int:user_id>/dashboard')
 students_api.add_resource(StudentGrades, '/<int:user_id>/grades')
@@ -173,3 +205,4 @@ students_api.add_resource(StudentPayments, '/<int:user_id>/payments')
 students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_id>')
 students_api.add_resource(GetStudentPayments, '/payments')
 students_api.add_resource(StudentTransactionHistory, '/<int:user_id>/transaction_history')
+students_api.add_resource(UnitsByCourseResource, '/units')
