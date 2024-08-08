@@ -284,14 +284,16 @@ class CourseResource(Resource):
     def get(self):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
         courses = Course.query.all()
-        courses_list = [{'course_id': course.id, 'name': course.name} for course in courses]
+        courses_list = [course.to_dict() for course in courses]
         return jsonify(courses_list)
     
     @jwt_required()
     def post(self):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
         data = request.get_json()
         new_course = Course(
             name=data.get('name'),
@@ -301,7 +303,6 @@ class CourseResource(Resource):
         db.session.add(new_course)
         db.session.commit()
         return make_response(new_course.to_dict(), 200)
-
 class CourseDetailResource(Resource):
     @jwt_required()
     def put(self, course_id):
