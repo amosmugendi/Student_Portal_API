@@ -249,17 +249,6 @@ class Payment(db.Model, SerializerMixin):
             "payment_date": self.payment_date.isoformat(),
             "transaction_id": self.transaction_id,
             "description": self.description,  # Include description in the dictionary
-            "created_at": self.created_at,
-            "updated_at": self.updated_at
-        }
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "student_id": self.student_id,
-            "amount": self.amount,
-            "payment_date": self.payment_date.isoformat(),
-            "transaction_id": self.transaction_id,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
         }

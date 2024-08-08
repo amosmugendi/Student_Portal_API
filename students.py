@@ -171,36 +171,7 @@ class PaymentReminder(Resource):
             return jsonify({
                 "message": "An internal server error occurred"
             }), 500
-        
-class UpcomingPayments(Resource):
-    @jwt_required()
-    def get(self, user_id):
-        try:
-            now = datetime.utcnow()
-
-            upcoming_payment = Payment.query.filter(Payment.payment_date > now, Payment.student_id == user_id).all()
-
-            if not upcoming_payment:
-                return jsonify({"message": "No upcoming payments found"}), 404
-
-            payments_data = [
-                {
-                    "payment_id": payment.id,
-                    "student_id": payment.student_id,
-                    "amount_paid": payment.amount,
-                    "payment_date": payment.payment_date.isoformat(),
-                    "description": payment.description
-                } for payment in upcoming_payment
-            ]
-
-            return jsonify({"paymentsData": payments_data})
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return jsonify({
-                "message": "An internal server error occurred"
-            }), 500
-
+            
 students_api.add_resource(StudentDashboard, '/<int:user_id>/dashboard')
 students_api.add_resource(StudentGrades, '/<int:user_id>/grades')
 students_api.add_resource(StudentFees, '/<int:user_id>/fees')
@@ -211,4 +182,4 @@ students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_i
 students_api.add_resource(GetStudentPayments, '/payments')
 students_api.add_resource(StudentTransactionHistory, '/<int:user_id>/transaction_history')
 students_api.add_resource(PaymentReminder, '/<int:user_id>/payment-reminder')
-students_api.add_resource(UpcomingPayments, '/<int:user_id>/upcoming-payment')
+# students_api.add_resource(UpcomingPayments, '/<int:user_id>/upcoming_payments')
