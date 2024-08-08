@@ -85,48 +85,23 @@ class GetStudentPayments(Resource):
     
 class StudentPayments(Resource):
     @jwt_required()
-    def post(self, user_id):
-        student = Student.query.filter_by(user_id=user_id).first_or_404()
-        data = request.get_json()
+    def get(self, user_id):
+        # Fetch payments for the student with the provided user_id
+        payments = Payment.query.filter_by(student_id=user_id).all()
+        if not payments:
+            return jsonify({"message": "No payments found"}), 404
         
-        amount = data.get('amount')
-        transaction_id = data.get('transaction_id')
-        description = data.get('description')  # Get the description field
+        # Serialize payments data
+        payments_data = [
+            {
+                'student_id': payment.student_id,
+                'payment_date': payment.payment_date.isoformat(),
+                'transaction_id': payment.transaction_id,
+                'amount_paid': payment.amount
+            } for payment in payments
+        ]
         
-        if amount <= 0:
-            return jsonify({"message": "Amount must be greater than zero"}), 400
-        
-        fee_balance = FeeBalance.query.filter_by(student_id=student.id).first()
-        if fee_balance is None:
-            return jsonify({"message": "Fee balance not found"}), 404
-        
-        # Calculate new total amount paid and new amount due
-        new_amount_paid = fee_balance.amount_paid + amount
-        new_amount_due = fee_balance.amount_due - amount
-        
-        # Check if the new total amount paid exceeds the maximum limit
-        max_limit = 200000
-        if new_amount_paid > max_limit:
-            return jsonify({"message": f"Payment exceeds the maximum limit of {max_limit}"}), 400
-        
-        # Ensure that the new amount due is not negative
-        if new_amount_due < 0:
-            return jsonify({"message": "Payment amount exceeds the amount due"}), 400
-        
-        # Update fee balance and add payment record
-        fee_balance.amount_paid = new_amount_paid
-        fee_balance.amount_due = new_amount_due
-        payment = Payment(
-            student_id=student.id, 
-            amount=amount, 
-            transaction_id=transaction_id, 
-            payment_date=datetime.utcnow(),
-            description=description  # Include description in the Payment instance
-        )
-        db.session.add(payment)
-        db.session.commit()
-        
-        return jsonify(fee_balance.to_dict())
+        return jsonify(payments_data)
 
 class DeletePayment(Resource):
     @jwt_required()
@@ -163,7 +138,40 @@ class StudentTransactionHistory(Resource):
         } for payment in payments]
 
         return jsonify(transactions)
+    
 
+
+class PaymentReminder(Resource):
+    @jwt_required()
+    def get(self, user_id):
+        try:
+            student = Student.query.filter_by(id=user_id).first_or_404()
+
+            fee_balances = FeeBalance.query.filter_by(student_id=student.id).all()
+
+            if not fee_balances:
+                return jsonify({
+                    "upcomingPayments": [],
+                    "message": "No upcoming payments found"
+                }), 404
+
+            upcoming_payments = [{
+                "due_date": fee_balance.due_date.isoformat(),
+                "amount_due": fee_balance.amount_due,
+                "amount_paid": fee_balance.amount_paid,
+                "remaining_balance": fee_balance.amount_due - fee_balance.amount_paid
+            } for fee_balance in fee_balances]
+
+            return jsonify({
+                "upcomingPayments": upcoming_payments
+            })
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return jsonify({
+                "message": "An internal server error occurred"
+            }), 500
+            
 students_api.add_resource(StudentDashboard, '/<int:user_id>/dashboard')
 students_api.add_resource(StudentGrades, '/<int:user_id>/grades')
 students_api.add_resource(StudentFees, '/<int:user_id>/fees')
@@ -173,3 +181,5 @@ students_api.add_resource(StudentPayments, '/<int:user_id>/payments')
 students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_id>')
 students_api.add_resource(GetStudentPayments, '/payments')
 students_api.add_resource(StudentTransactionHistory, '/<int:user_id>/transaction_history')
+students_api.add_resource(PaymentReminder, '/<int:user_id>/payment-reminder')
+# students_api.add_resource(UpcomingPayments, '/<int:user_id>/upcoming_payments')
