@@ -1,8 +1,8 @@
-"""reset migrations
+"""relationship consistency
 
-Revision ID: 29cacfbd5208
+Revision ID: f1895c3bac3e
 Revises: 
-Create Date: 2024-08-01 16:11:22.182180
+Create Date: 2024-08-09 12:25:33.818767
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '29cacfbd5208'
+revision = 'f1895c3bac3e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,11 +22,13 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('fee', sa.Float(), nullable=False),
+    sa.Column('duration', sa.String(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('unit',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
+    sa.Column('description', sa.String(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('user',
@@ -46,7 +48,7 @@ def upgrade():
     sa.Column('last_name', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('course_unit',
@@ -54,8 +56,8 @@ def upgrade():
     sa.Column('course_id', sa.Integer(), nullable=False),
     sa.Column('unit_id', sa.Integer(), nullable=False),
     sa.Column('phase', sa.String(), nullable=False),
-    sa.ForeignKeyConstraint(['course_id'], ['course.id'], ),
-    sa.ForeignKeyConstraint(['unit_id'], ['unit.id'], ),
+    sa.ForeignKeyConstraint(['course_id'], ['course.id'], onupdate='CASCADE', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['unit_id'], ['unit.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('student',
@@ -68,19 +70,18 @@ def upgrade():
     sa.Column('current_phase', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['course_id'], ['course.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['course_id'], ['course.id'], onupdate='CASCADE', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('fee_balance',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('student_id', sa.Integer(), nullable=False),
     sa.Column('amount_due', sa.Float(), nullable=False),
-    sa.Column('amount_paid', sa.Float(), nullable=False),
     sa.Column('due_date', sa.Date(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('grade',
@@ -91,8 +92,8 @@ def upgrade():
     sa.Column('phase', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['course_unit_id'], ['course_unit.id'], ),
-    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
+    sa.ForeignKeyConstraint(['course_unit_id'], ['course_unit.id'], onupdate='CASCADE', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('payment',
@@ -101,9 +102,10 @@ def upgrade():
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('payment_date', sa.DateTime(), nullable=False),
     sa.Column('transaction_id', sa.String(), nullable=False),
+    sa.Column('description', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

@@ -14,8 +14,8 @@ class User(db.Model, SerializerMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    student = db.relationship('Student', back_populates='user', uselist=False)
-    admin = db.relationship('Admin', back_populates='user', uselist=False)
+    student = db.relationship('Student', back_populates='user', uselist=False, cascade="all, delete-orphan", passive_deletes=True)
+    admin = db.relationship('Admin', back_populates='user', uselist=False, cascade="all, delete-orphan", passive_deletes=True)
 
     def __init__(self, username, email, password_hash, role):
         self.username = username
@@ -29,27 +29,27 @@ class User(db.Model, SerializerMixin):
             "username": self.username,
             "email": self.email,
             "role": self.role,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
         }
 
 class Student(db.Model, SerializerMixin):
     __tablename__ = 'student'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     date_of_birth = db.Column(db.Date, nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     current_phase = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship('User', back_populates='student')
     course = db.relationship('Course', back_populates='students')
-    grades = db.relationship('Grade', back_populates='student')
-    fee_balance = db.relationship('FeeBalance', back_populates='student', uselist=False)
-    payments = db.relationship('Payment', back_populates='student', lazy='dynamic')
+    grades = db.relationship('Grade', back_populates='student', cascade="all, delete-orphan", passive_deletes=True)
+    fee_balance = db.relationship('FeeBalance', back_populates='student', uselist=False, cascade="all, delete-orphan", passive_deletes=True)
+    payments = db.relationship('Payment', back_populates='student', lazy='dynamic', cascade="all, delete-orphan", passive_deletes=True)
 
     def __init__(self, user_id, first_name, last_name, date_of_birth, course_id, current_phase):
         self.user_id = user_id
@@ -66,18 +66,18 @@ class Student(db.Model, SerializerMixin):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "date_of_birth": self.date_of_birth.isoformat(),
-            "course_name": self.course.name if self.course else None,  # Ensure course name is included
+            "course_name": self.course.name if self.course else None,
             "current_phase": self.current_phase,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "email": self.user.email if self.user else None,  # Ensure user email is included
-            "fee_balance": self.fee_balance.to_dict() if self.fee_balance else None  # Include fee balance details
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "email": self.user.email if self.user else None,
+            "fee_balance": self.fee_balance.to_dict() if self.fee_balance else None
         }
 
 class Admin(db.Model, SerializerMixin):
     __tablename__ = 'admin'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -96,8 +96,8 @@ class Admin(db.Model, SerializerMixin):
             "user_id": self.user_id,
             "first_name": self.first_name,
             "last_name": self.last_name,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
         }
 
 class Course(db.Model, SerializerMixin):
@@ -106,8 +106,8 @@ class Course(db.Model, SerializerMixin):
     name = db.Column(db.String, nullable=False)
     fee = db.Column(db.Float, nullable=False)
     duration = db.Column(db.String, nullable=False)
-    students = db.relationship('Student', back_populates='course')
-    phases = db.relationship('CourseUnit', back_populates='course')
+    students = db.relationship('Student', back_populates='course', cascade="all, delete-orphan", passive_deletes=True)
+    phases = db.relationship('CourseUnit', back_populates='course', cascade="all, delete-orphan", passive_deletes=True)
 
     def __init__(self, name, fee, duration):
         self.name = name
@@ -127,7 +127,7 @@ class Unit(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
-    courses = db.relationship('CourseUnit', back_populates='unit')
+    courses = db.relationship('CourseUnit', back_populates='unit', cascade="all, delete-orphan", passive_deletes=True)
 
     def __init__(self, name, description):
         self.name = name
@@ -143,8 +143,8 @@ class Unit(db.Model, SerializerMixin):
 class CourseUnit(db.Model, SerializerMixin):
     __tablename__ = 'course_unit'
     id = db.Column(db.Integer, primary_key=True)
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
-    unit_id = db.Column(db.Integer, db.ForeignKey('unit.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
+    unit_id = db.Column(db.Integer, db.ForeignKey('unit.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     phase = db.Column(db.String, nullable=False)
 
     course = db.relationship('Course', back_populates='phases')
@@ -166,8 +166,8 @@ class CourseUnit(db.Model, SerializerMixin):
 class Grade(db.Model, SerializerMixin):
     __tablename__ = 'grade'
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
-    course_unit_id = db.Column(db.Integer, db.ForeignKey('course_unit.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
+    course_unit_id = db.Column(db.Integer, db.ForeignKey('course_unit.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     grade = db.Column(db.String, nullable=False)
     phase = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -195,19 +195,19 @@ class Grade(db.Model, SerializerMixin):
 class FeeBalance(db.Model, SerializerMixin):
     __tablename__ = 'fee_balance'
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     amount_due = db.Column(db.Float, nullable=False)
-    amount_paid = db.Column(db.Float, nullable=False)
+    amount_paid = db.Column(db.Float, nullable=False)  # Add this line
     due_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     student = db.relationship('Student', back_populates='fee_balance')
 
-    def __init__(self, student_id, amount_due, amount_paid, due_date):
+    def __init__(self, student_id, amount_due, amount_paid, due_date):  # Add amount_paid here
         self.student_id = student_id
         self.amount_due = amount_due
-        self.amount_paid = amount_paid
+        self.amount_paid = amount_paid  # Initialize it here
         self.due_date = due_date
 
     def to_dict(self):
@@ -215,20 +215,20 @@ class FeeBalance(db.Model, SerializerMixin):
             "id": self.id,
             "student_id": self.student_id,
             "amount_due": self.amount_due,
-            "amount_paid": self.amount_paid,
+            "amount_paid": self.amount_paid,  # Include it in the dictionary
             "due_date": self.due_date.isoformat(),
-            "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
         }
 
 class Payment(db.Model, SerializerMixin):
     __tablename__ = 'payment'
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     payment_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     transaction_id = db.Column(db.String, nullable=False)
-    description = db.Column(db.String, nullable=True)  # Add description column
+    description = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -239,7 +239,7 @@ class Payment(db.Model, SerializerMixin):
         self.amount = amount
         self.payment_date = payment_date
         self.transaction_id = transaction_id
-        self.description = description  # Initialize description
+        self.description = description
 
     def to_dict(self):
         return {
@@ -248,7 +248,7 @@ class Payment(db.Model, SerializerMixin):
             "amount": self.amount,
             "payment_date": self.payment_date.isoformat(),
             "transaction_id": self.transaction_id,
-            "description": self.description,  # Include description in the dictionary
+            "description": self.description,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat()
         }

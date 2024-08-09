@@ -302,16 +302,19 @@ class CourseResource(Resource):
         )
         db.session.add(new_course)
         db.session.commit()
-        return make_response(new_course.to_dict(), 200)
+        return make_response(new_course.to_dict(), 201)
+
 class CourseDetailResource(Resource):
     @jwt_required()
     def put(self, course_id):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
         data = request.get_json()
         course = Course.query.get_or_404(course_id)
-        course.name = data.get('name')
-        course.duration = data.get('duration')
+        course.name = data.get('name', course.name)  # Keep current value if not provided
+        course.duration = data.get('duration', course.duration)
+        course.fee = data.get('fee', course.fee)  # Allow fee to be updated if needed
         db.session.commit()
         return make_response(course.to_dict(), 200)
 
@@ -319,11 +322,11 @@ class CourseDetailResource(Resource):
     def delete(self, course_id):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
         course = Course.query.get_or_404(course_id)
         db.session.delete(course)
         db.session.commit()
-        return {'msg': 'Course removed successfully'}
-
+        return jsonify({'msg': 'Course removed successfully'})
 # Unit Management
 class UnitResource(Resource):
     @jwt_required()
