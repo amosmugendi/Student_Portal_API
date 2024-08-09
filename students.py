@@ -97,7 +97,8 @@ class StudentPayments(Resource):
                 'student_id': payment.student_id,
                 'payment_date': payment.payment_date.isoformat(),
                 'transaction_id': payment.transaction_id,
-                'amount_paid': payment.amount
+                'amount': payment.amount,
+                'description': payment.description
             } for payment in payments
         ]
         
