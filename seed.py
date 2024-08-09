@@ -134,11 +134,13 @@ def seed_data():
 
         # Create Grades
         for student in Student.query.all():
+            added_phases = set()  # Keep track of phases that have been assigned a grade
             for course_unit in CourseUnit.query.filter_by(course_id=student.course_id).all():
-                grade = Grade(student_id=student.user_id, course_unit_id=course_unit.id, grade=random.choice(['A', 'B', 'C', 'D', 'E']), phase=student.current_phase)
-                db.session.add(grade)
+                if course_unit.phase not in added_phases:
+                    grade = Grade(student_id=student.user_id, course_unit_id=course_unit.id, grade=random.choice(['A', 'B', 'C', 'D', 'E']), phase=course_unit.phase)
+                    db.session.add(grade)
+                    added_phases.add(course_unit.phase)  # Mark this phase as having a grade assigned
         db.session.commit()
-
         # Create Payments
         for student in Student.query.all():
             for _ in range(2):  # Each student gets 2 payment entries
