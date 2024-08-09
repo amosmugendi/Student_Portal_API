@@ -175,33 +175,34 @@ class PaymentReminder(Resource):
 
 class UnitsByCourseResource(Resource):
     @jwt_required()  # Requires the user to be logged in
-    def get(self):
-        # Get the logged-in user's identity (e.g., user ID)
-        user_id = get_jwt_identity()
-        
-        # Fetch the user from the database (assuming user model is Student)
-        student = Student.query.get(user_id)
+    def get(self, student_id):
+        # Fetch the student from the database using the provided student_id
+        student = Student.query.get(student_id)
         
         if not student:
-            return {"error": "User not found"}, 404
+            return {"error": "Student not found"}, 404
         
-        # Get the course_id associated with the logged-in user
-        course_id = student.course_id
+        # Get the course associated with the specified student
+        course = Course.query.get(student.course_id)
         
-        if not course_id:
-            return {"error": "No course associated with this user"}, 404
+        if not course:
+            return {"error": "No course associated with this student"}, 404
         
-        # Query to get all units associated with the user's course
+        # Query to get all units associated with the student's course
         units = (db.session.query(Unit)
                  .join(CourseUnit, Unit.id == CourseUnit.unit_id)
-                 .filter(CourseUnit.course_id == course_id)
+                 .filter(CourseUnit.course_id == course.id)
                  .all())
         
-        # Serialize the units
+        # Serialize the course and units
+        course_data = course.to_dict()  # Assuming Course model has a to_dict() method
         unit_data = [unit.to_dict() for unit in units]
         
-        return unit_data, 200
-
+        # Return the course and its associated units
+        return {
+            "course": course_data,
+            "units": unit_data
+        }, 200
 
 
 students_api.add_resource(StudentDashboard, '/<int:user_id>/dashboard')
@@ -214,5 +215,4 @@ students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_i
 students_api.add_resource(GetStudentPayments, '/payments')
 students_api.add_resource(StudentTransactionHistory, '/<int:user_id>/transaction_history')
 students_api.add_resource(PaymentReminder, '/<int:user_id>/payment-reminder')
-# students_api.add_resource(UpcomingPayments, '/<int:user_id>/upcoming_payments')
-students_api.add_resource(UnitsByCourseResource, '/units')
+students_api.add_resource(UnitsByCourseResource, '/units-by-course/<int:student_id>')
