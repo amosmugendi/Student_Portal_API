@@ -187,7 +187,7 @@ class Grade(db.Model, SerializerMixin):
             'id': self.id,
             'student_id': self.student_id,
             'course_unit_id': self.course_unit_id,
-            'course_name': self.course_unit.course.name,
+            'course_name': self.course_unit.course.name if self.course_unit and self.course_unit.course else 'N/A',
             'grade': self.grade,
             'phase': self.phase
         }
