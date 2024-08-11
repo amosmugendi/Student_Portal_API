@@ -221,20 +221,22 @@ class FeeBalance(db.Model, SerializerMixin):
             "updated_at": self.updated_at.isoformat()
         }
 
-class Payment(db.Model, SerializerMixin):
+class Payment(db.Model):
     __tablename__ = 'payment'
+    
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     payment_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    transaction_id = db.Column(db.String, nullable=False)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id', ondelete="SET NULL"), nullable=True)
     description = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     student = db.relationship('Student', back_populates='payments')
+    transaction = db.relationship('Transaction', back_populates='payments')
 
-    def __init__(self, student_id, amount, payment_date, transaction_id, description=None):
+    def __init__(self, student_id, amount, payment_date, transaction_id=None, description=None):
         self.student_id = student_id
         self.amount = amount
         self.payment_date = payment_date
@@ -249,6 +251,35 @@ class Payment(db.Model, SerializerMixin):
             "payment_date": self.payment_date.isoformat(),
             "transaction_id": self.transaction_id,
             "description": self.description,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
+        }
+
+class Transaction(db.Model):
+    __tablename__ = 'transaction'
+
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.String, nullable=False)
+    phone = db.Column(db.String, nullable=False)
+    trans_for=db.Column(db.String, nullable=True)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    trans_id = db.Column(db.String, nullable=True)
+    trans_date = db.Column(db.DateTime, nullable=True)
+    user_description = db.Column(db.String, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    desc = db.Column(db.String, nullable=False)
+
+    payments = db.relationship('Payment', back_populates='transaction')
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "status": self.status,
+            "phone": self.phone,
+            "amount": self.amount,
+            "trans_id": self.trans_id,
+            "trans_date": self.trans_date.isoformat() if self.trans_date else None,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat()
         }

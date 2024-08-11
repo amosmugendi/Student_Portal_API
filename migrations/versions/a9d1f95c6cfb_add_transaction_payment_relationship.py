@@ -1,8 +1,8 @@
-"""relationship consistency
+"""add transaction-payment relationship
 
-Revision ID: f1895c3bac3e
+Revision ID: a9d1f95c6cfb
 Revises: 
-Create Date: 2024-08-09 12:25:33.818767
+Create Date: 2024-08-11 18:33:57.702263
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f1895c3bac3e'
+revision = 'a9d1f95c6cfb'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -23,6 +23,17 @@ def upgrade():
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('fee', sa.Float(), nullable=False),
     sa.Column('duration', sa.String(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('transaction',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('phone', sa.String(), nullable=False),
+    sa.Column('amount', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('trans_id', sa.String(), nullable=True),
+    sa.Column('trans_date', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('unit',
@@ -78,6 +89,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('student_id', sa.Integer(), nullable=False),
     sa.Column('amount_due', sa.Float(), nullable=False),
+    sa.Column('amount_paid', sa.Float(), nullable=False),
     sa.Column('due_date', sa.Date(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
@@ -101,11 +113,12 @@ def upgrade():
     sa.Column('student_id', sa.Integer(), nullable=False),
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('payment_date', sa.DateTime(), nullable=False),
-    sa.Column('transaction_id', sa.String(), nullable=False),
+    sa.Column('transaction_id', sa.Integer(), nullable=True),
     sa.Column('description', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['student_id'], ['student.id'], onupdate='CASCADE', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['transaction_id'], ['transaction.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
@@ -121,5 +134,6 @@ def downgrade():
     op.drop_table('admin')
     op.drop_table('user')
     op.drop_table('unit')
+    op.drop_table('transaction')
     op.drop_table('course')
     # ### end Alembic commands ###
