@@ -163,7 +163,8 @@ class MpesaCallback(Resource):
             body = callback_data.get('Body', {}).get('stkCallback', {})
             
             if 'CallbackMetadata' not in body:
-                return {"error": "Invalid callback data", "success": False, "message": "Callback processed"}, 400
+                message = body.get('ResultDesc')
+                return {"error": message, "success": False, "message": message}, 201
 
             metadata = body.get('CallbackMetadata', {}).get('Item', [])
             
