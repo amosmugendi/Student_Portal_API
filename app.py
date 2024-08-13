@@ -7,7 +7,7 @@ from admin import admin_bp
 from students import students_bp  # Import the students blueprint
 from payment import payment_bp  # Import the payment blueprint
 from datetime import timedelta
-from Mpesa_Auth import mpesa_auth_bp
+# from Mpesa_Auth import mpesa_auth_bp
 
 
 app = Flask(__name__)
@@ -31,7 +31,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(students_bp)  # Register the students blueprint
 app.register_blueprint(payment_bp)  # Register the payment blueprint
-app.register_blueprint(mpesa_auth_bp)
+# app.register_blueprint(mpesa_auth_bp)
 
 
 # Basic route

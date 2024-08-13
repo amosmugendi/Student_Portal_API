@@ -1,6 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime
+import uuid
+
 
 db = SQLAlchemy()
 
@@ -228,19 +230,18 @@ class Payment(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('student.id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     payment_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id', ondelete="SET NULL"), nullable=True)
     description = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
     student = db.relationship('Student', back_populates='payments')
-    transaction = db.relationship('Transaction', back_populates='payments')
+    transaction = db.relationship('Transaction', back_populates='payment', uselist=False)  # Add back_populates here
 
-    def __init__(self, student_id, amount, payment_date, transaction_id=None, description=None):
+    def __init__(self, student_id, amount, payment_date=None, description=None):
         self.student_id = student_id
         self.amount = amount
-        self.payment_date = payment_date
-        self.transaction_id = transaction_id
+        self.payment_date = payment_date or datetime.utcnow()
         self.description = description
 
     def to_dict(self):
@@ -249,7 +250,6 @@ class Payment(db.Model):
             "student_id": self.student_id,
             "amount": self.amount,
             "payment_date": self.payment_date.isoformat(),
-            "transaction_id": self.transaction_id,
             "description": self.description,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat()
@@ -260,26 +260,48 @@ class Transaction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     status = db.Column(db.String, nullable=False)
-    phone = db.Column(db.String, nullable=False)
-    trans_for=db.Column(db.String, nullable=True)
+    phone = db.Column(db.String(15), nullable=False)
+    trans_for = db.Column(db.String, nullable=True)  # What the transaction was for
     amount = db.Column(db.Numeric(10, 2), nullable=False)
-    trans_id = db.Column(db.String, nullable=True)
-    trans_date = db.Column(db.DateTime, nullable=True)
+    trans_date = db.Column(db.DateTime, nullable=False)
     user_description = db.Column(db.String, nullable=True)
+    mpesa_receipt_number = db.Column(db.String, nullable=True, unique=True)  # M-Pesa receipt number
+    payer_names = db.Column(db.String, nullable=True)  # Payer's names from M-Pesa
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    desc = db.Column(db.String, nullable=False)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id', ondelete="SET NULL"))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE"), nullable=False)  # New user_id column
+    unique_identifier = db.Column(db.String, nullable=True, unique=True)  # Unique identifier for the transaction
 
-    payments = db.relationship('Payment', back_populates='transaction')
+    # Relationships
+    payment = db.relationship('Payment', back_populates='transaction')
+    user = db.relationship('User')  # Relationship with the User model
+
+    def __init__(self, status, phone, trans_for, amount, trans_date, mpesa_receipt_number, payer_names, user_id, unique_identifier, user_description=None):
+        self.status = status
+        self.phone = phone
+        self.trans_for = trans_for
+        self.amount = amount
+        self.trans_date = trans_date
+        self.mpesa_receipt_number = mpesa_receipt_number
+        self.payer_names = payer_names
+        self.user_id = user_id
+        self.unique_identifier = unique_identifier
+        self.user_description = user_description
 
     def to_dict(self):
         return {
             "id": self.id,
             "status": self.status,
             "phone": self.phone,
-            "amount": self.amount,
-            "trans_id": self.trans_id,
-            "trans_date": self.trans_date.isoformat() if self.trans_date else None,
+            "trans_for": self.trans_for,
+            "amount": float(self.amount),  # Convert from decimal to float for serialization
+            "trans_date": self.trans_date.isoformat(),
+            "user_description": self.user_description,
+            "mpesa_receipt_number": self.mpesa_receipt_number,
+            "payer_names": self.payer_names,
+            "user_id": self.user_id,  # Include user_id in the dictionary
             "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat()
+            "updated_at": self.updated_at.isoformat(),
+            "unique_identifier": self.unique_identifier
         }
