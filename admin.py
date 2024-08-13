@@ -291,18 +291,41 @@ class CourseResource(Resource):
     
     @jwt_required()
     def post(self):
-        if not check_admin_role():
-            return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
-        
-        data = request.get_json()
-        new_course = Course(
-            name=data.get('name'),
-            fee=data.get('fee'),
-            duration=data.get('duration')
-        )
-        db.session.add(new_course)
-        db.session.commit()
-        return make_response(new_course.to_dict(), 201)
+        try:
+            # Get course data from request
+            data = request.get_json()
+            print("Received data:", data)
+            name = data.get('name')
+            fee = data.get('fee')
+            duration = data.get('duration')
+            unit_ids = data.get('units')  # List of unit IDs
+
+            # Validate input data
+            if not name or not fee or not duration or not unit_ids:
+                return {"error": "Missing required fields"}, 400
+
+            # Create a new course instance
+            new_course = Course(name=name, fee=fee, duration=duration)
+            db.session.add(new_course)
+            db.session.flush()  # Flush to get the course ID
+
+            # Link the course with the provided units
+            for unit_id in unit_ids:
+                unit = Unit.query.get(unit_id)
+                if unit:
+                    course_unit = CourseUnit(course_id=new_course.id, unit_id=unit.id, phase="Phase 0")
+                    db.session.add(course_unit)
+                else:
+                    return {"error": f"Unit with id {unit_id} not found"}, 404
+
+            # Commit the transaction
+            db.session.commit()
+
+            return new_course.to_dict(), 201
+
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 500
 
 class CourseDetailResource(Resource):
     @jwt_required()
