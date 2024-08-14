@@ -3,6 +3,10 @@ from flask_restful import Resource, Api
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from models import Student, Grade, FeeBalance, Payment, Course, CourseUnit, Unit, db
+from flask import jsonify
+from flask_restful import Resource
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import Student, Payment, FeeBalance, db
 
 # Initialize the Blueprint with the import_name argument
 students_bp = Blueprint('students_bp', __name__, url_prefix='/students')
@@ -65,11 +69,6 @@ class StudentProfile(Resource):
         
         db.session.commit()
         return jsonify(student.to_dict())
-
-from flask import jsonify
-from flask_restful import Resource
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import Student, Payment, FeeBalance, db
 
 class GetStudentPayments(Resource):
     @jwt_required()

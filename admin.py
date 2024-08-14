@@ -319,10 +319,12 @@ class CourseResource(Resource):
     
     @jwt_required()
     def post(self):
+        if not check_admin_role():
+            return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
         try:
             # Get course data from request
             data = request.get_json()
-            print("Received data:", data)
             name = data.get('name')
             fee = data.get('fee')
             duration = data.get('duration')
@@ -330,31 +332,27 @@ class CourseResource(Resource):
 
             # Validate input data
             if not name or not fee or not duration or not unit_ids:
-                return {"error": "Missing required fields"}, 400
+                return make_response(jsonify({"msg": "Missing required fields"}), 400)
 
-            # Create a new course instance
+            # Create new course
             new_course = Course(name=name, fee=fee, duration=duration)
             db.session.add(new_course)
-            db.session.flush()  # Flush to get the course ID
+            db.session.commit()
 
-            # Link the course with the provided units
+            # Associate units with the course
             for unit_id in unit_ids:
                 unit = Unit.query.get(unit_id)
                 if unit:
-                    course_unit = CourseUnit(course_id=new_course.id, unit_id=unit.id, phase="Phase 0")
+                    course_unit = CourseUnit(course_id=new_course.id, unit_id=unit.id)
                     db.session.add(course_unit)
-                else:
-                    return {"error": f"Unit with id {unit_id} not found"}, 404
 
-            # Commit the transaction
             db.session.commit()
 
-            return new_course.to_dict(), 201
-
+            return make_response(jsonify(new_course.to_dict()), 201)
+        
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
-
+            return make_response(jsonify({"msg": f"Error adding course: {str(e)}"}), 500)
 class CourseDetailResource(Resource):
     @jwt_required()
     def put(self, course_id):
@@ -494,6 +492,66 @@ class StudentCount(Resource):
         student_count = Student.query.count()
         return jsonify({'student_count': student_count})
 
+class CourseWithUnitsResource(Resource):
+    @jwt_required()
+    def post(self):
+        if not check_admin_role():
+            return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
+        try:
+            data = request.get_json()
+            name = data.get('name')
+            fee = data.get('fee')
+            duration = data.get('duration')
+            unit_ids = data.get('units')  # List of unit IDs
+
+            if not name or not fee or not duration or not isinstance(unit_ids, list):
+                return make_response(jsonify({"msg": "Missing or invalid required fields"}), 400)
+
+            new_course = Course(name=name, fee=fee, duration=duration)
+            db.session.add(new_course)
+            db.session.commit()
+
+            for unit_id in unit_ids:
+                if unit_id is None:
+                    continue  # Skip None values
+                unit = Unit.query.get(unit_id)
+                if unit:
+                    course_unit = CourseUnit(course_id=new_course.id, unit_id=unit.id, phase="Phase 1")  # Add appropriate phase
+                    db.session.add(course_unit)
+                else:
+                    print(f"Unit with ID {unit_id} not found")
+
+            db.session.commit()
+
+            return make_response(jsonify(new_course.to_dict()), 201)
+        
+        except Exception as e:
+            db.session.rollback()
+            return make_response(jsonify({"msg": f"Error adding course: {str(e)}"}), 500)
+    
+    @jwt_required()
+    def get(self):
+        if not check_admin_role():
+            return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
+        try:
+            course_units = CourseUnit.query.all()
+            course_units_list = []
+            for course_unit in course_units:
+                course = Course.query.get(course_unit.course_id)
+                unit = Unit.query.get(course_unit.unit_id)
+                course_units_list.append({
+                    'course_name': course.name if course else None,
+                    'unit_name': unit.name if unit else None,
+                    'duration': course.duration if course else None,
+                    'fees': course.fee if course else None
+                })
+            return jsonify(course_units_list)
+        
+        except Exception as e:
+            return make_response(jsonify({"msg": f"Error retrieving course units: {str(e)}"}), 500)
+
 admin_api.add_resource(GetStudents, '/students')
 admin_api.add_resource(CreateStudent, '/students/create')
 admin_api.add_resource(StudentManager, '/students/<int:student_id>')
@@ -511,6 +569,7 @@ admin_api.add_resource(AdminManager, '/admins/<int:admin_id>')
 admin_api.add_resource(DeleteUsers, '/users/<int:user_id>')
 
 admin_api.add_resource(CourseResource, '/courses')
+admin_api.add_resource(CourseWithUnitsResource, '/Unit_courses')
 admin_api.add_resource(CourseDetailResource, '/courses/<int:course_id>')
 
 admin_api.add_resource(UnitResource, '/units')

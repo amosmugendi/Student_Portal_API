@@ -18,6 +18,7 @@ asyncpg = "*"
 faker = "*"
 requests = "*"
 flask-mail = "*"
+marshmallow-sqlalchemy = "*"
 
 [dev-packages]
 
