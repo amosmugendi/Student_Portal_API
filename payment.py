@@ -163,7 +163,7 @@ class MpesaCallback(Resource):
             body = callback_data.get('Body', {}).get('stkCallback', {})
             
             if 'CallbackMetadata' not in body:
-                message = body.get('ResultDesc')
+                message = body.get('ResultDesc', 'Missing CallbackMetadata')
                 return {"error": message, "success": False, "message": message}, 201
 
             metadata = body.get('CallbackMetadata', {}).get('Item', [])
@@ -182,25 +182,23 @@ class MpesaCallback(Resource):
                 elif item.get('Name') == 'PhoneNumber':
                     phone_number = item.get('Value')
                 elif item.get('Name') == 'TransactionDate':
-                    transaction_date = datetime.strptime(str(item.get('Value')), '%Y%m%d%H%M%S')
+                    try:
+                        transaction_date = datetime.strptime(str(item.get('Value')), '%Y%m%d%H%M%S')
+                    except ValueError:
+                        return {"error": "Invalid transaction date format", "success": False}, 400
                 elif item.get('Name') == 'PayerName':
                     payer_names = item.get('Value')
 
-            if not phone_number or not amount:
+            if not phone_number or amount is None:
                 return {"error": "Missing required fields in callback data", "success": False, "message": "Callback processed"}, 400
 
-            # Retrieve the transaction using the unique identifier
-            unique_identifier = body.get('MerchantRequestID')  # Use the unique identifier received from M-Pesa
-            # merchant_request_id = callback_data.get("MerchantRequestID")
-            
-            # print('merchant_request_id', merchant_request_id)
-            print('merchant reequest id original', unique_identifier)
+            unique_identifier = body.get('MerchantRequestID')
+            print('Merchant Request ID:', unique_identifier)
             transaction = Transaction.query.filter_by(unique_identifier=unique_identifier).first()
 
             if not transaction:
                 return {"ResultCode": 1, "ResultDesc": "Transaction not found"}, 400
 
-            # Update the transaction details
             transaction.status = body['ResultDesc']
             transaction.mpesa_receipt_number = mpesa_receipt_number
             transaction.payer_names = payer_names
@@ -209,7 +207,6 @@ class MpesaCallback(Resource):
             transaction.phone = phone_number
             db.session.commit()
 
-            # Save the Payment entry
             new_payment = Payment(
                 student_id=transaction.trans_for,
                 amount=amount,
@@ -219,7 +216,6 @@ class MpesaCallback(Resource):
             db.session.add(new_payment)
             db.session.commit()
 
-            # Link the Payment ID with the Transaction
             transaction.payment_id = new_payment.id
             db.session.commit()
 

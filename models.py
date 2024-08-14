@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime
 from sqlalchemy import event
+from sqlalchemy.orm import Session
 
 
 db = SQLAlchemy()
@@ -307,21 +308,28 @@ class Transaction(db.Model):
         }
         
         
-# Event Listener to Update FeeBalance after a Payment
 @event.listens_for(Payment, 'after_insert')
 def update_fee_balance(mapper, connection, target):
-    # Fetch the student's fee balance record
-    fee_balance = connection.execute(
-        db.select([FeeBalance]).where(FeeBalance.student_id == target.student_id)
-    ).fetchone()
+    # Create a SQLAlchemy Session object from the connection
+    session = Session(bind=connection)
 
-    # Calculate the new amount_paid
-    if fee_balance:
-        new_amount_paid = fee_balance.amount_paid + target.amount
+    try:
+        # Fetch the student's fee balance record
+        fee_balance = session.query(FeeBalance).filter_by(student_id=target.student_id).first()
 
-        # Update the FeeBalance record
-        connection.execute(
-            db.update(FeeBalance)
-            .where(FeeBalance.id == fee_balance.id)
-            .values(amount_paid=new_amount_paid, updated_at=datetime.utcnow())
-        )
+        # If a fee balance record exists, update it
+        if fee_balance:
+            fee_balance.amount_paid += target.amount
+            fee_balance.updated_at = datetime.utcnow()
+
+            # Commit the changes
+            session.commit()
+
+    except Exception as e:
+        # Rollback in case of an error
+        session.rollback()
+        raise e
+
+    finally:
+        # Close the session
+        session.close()

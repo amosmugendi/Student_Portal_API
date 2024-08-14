@@ -66,6 +66,11 @@ class StudentProfile(Resource):
         db.session.commit()
         return jsonify(student.to_dict())
 
+from flask import jsonify
+from flask_restful import Resource
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import Student, Payment, FeeBalance, db
+
 class GetStudentPayments(Resource):
     @jwt_required()
     def get(self):
@@ -77,21 +82,16 @@ class GetStudentPayments(Resource):
 
         payments = Payment.query.filter_by(student_id=current_student_id).all()
         
-        if not payments:
-            return {"msg": "No payments found for this student"}, 200
-
         payments_list = [payment.to_dict() for payment in payments]
         return jsonify(payments_list)
-    
+
 class StudentPayments(Resource):
     @jwt_required()
     def get(self, user_id):
-        # Fetch payments for the student with the provided user_id
         payments = Payment.query.filter_by(student_id=user_id).all()
         if not payments:
-            return jsonify({"message": "No payments found"}), 404
+            return jsonify([])  # Return an empty list instead of a message
         
-        # Serialize payments data
         payments_data = [
             {
                 'student_id': payment.student_id,
@@ -114,10 +114,8 @@ class DeletePayment(Resource):
         if fee_balance is None:
             return jsonify({"message": "Fee balance not found"}), 404
         
-        # Remove the payment from the database
         db.session.delete(payment)
         
-        # Adjust the fee balance
         fee_balance.amount_paid -= payment.amount
         db.session.commit()
         
@@ -130,7 +128,7 @@ class StudentTransactionHistory(Resource):
         payments = Payment.query.filter_by(student_id=student.id).all()
 
         if not payments:
-            return jsonify({"message": "No transaction history found"}), 404
+            return jsonify([])  # Return an empty list instead of a message
 
         transactions = [{
             "payment_date": payment.payment_date.isoformat(),
@@ -139,7 +137,6 @@ class StudentTransactionHistory(Resource):
         } for payment in payments]
 
         return jsonify(transactions)
-    
 
 
 class PaymentReminder(Resource):
