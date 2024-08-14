@@ -200,12 +200,12 @@ def seed_data():
                     db.session.add(grade)
                     added_phases.add(course_unit.phase)  # Mark this phase as having a grade assigned
         db.session.commit()
-        # Create Payments
-        for student in Student.query.all():
-            for _ in range(2):  # Each student gets 2 payment entries
-                payment = Payment(student_id=student.user_id, amount=random.randint(5000, 20000), payment_date=datetime.utcnow(), transaction_id=f'txn_{random.randint(1000, 9999)}', description='Fees')
-                db.session.add(payment)
-        db.session.commit()
+        # # Create Payments
+        # for student in Student.query.all():
+        #     for _ in range(2):  # Each student gets 2 payment entries
+        #         payment = Payment(student_id=student.user_id, amount=random.randint(5000, 20000), payment_date=datetime.utcnow(), transaction_id=f'txn_{random.randint(1000, 9999)}', description='Fees')
+        #         db.session.add(payment)
+        # db.session.commit()
 
         print("Database seeded successfully!")
 
