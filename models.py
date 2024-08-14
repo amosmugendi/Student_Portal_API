@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_serializer import SerializerMixin
 from datetime import datetime
-import uuid
+from sqlalchemy import event
 
 
 db = SQLAlchemy()
@@ -305,3 +305,23 @@ class Transaction(db.Model):
             "updated_at": self.updated_at.isoformat(),
             "unique_identifier": self.unique_identifier
         }
+        
+        
+# Event Listener to Update FeeBalance after a Payment
+@event.listens_for(Payment, 'after_insert')
+def update_fee_balance(mapper, connection, target):
+    # Fetch the student's fee balance record
+    fee_balance = connection.execute(
+        db.select([FeeBalance]).where(FeeBalance.student_id == target.student_id)
+    ).fetchone()
+
+    # Calculate the new amount_paid
+    if fee_balance:
+        new_amount_paid = fee_balance.amount_paid + target.amount
+
+        # Update the FeeBalance record
+        connection.execute(
+            db.update(FeeBalance)
+            .where(FeeBalance.id == fee_balance.id)
+            .values(amount_paid=new_amount_paid, updated_at=datetime.utcnow())
+        )
