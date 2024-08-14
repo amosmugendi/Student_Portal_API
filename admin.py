@@ -4,10 +4,12 @@ from models import Student, User, db, FeeBalance, Grade, Admin, Course, Unit, Co
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
+from flask_mail import Mail,Message
 
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
 bcrypt = Bcrypt()
 admin_api = Api(admin_bp)
+mail = Mail()
 
 def check_user_exists(username, email):
     existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
@@ -79,7 +81,34 @@ class CreateStudent(Resource):
             db.session.rollback()
             return make_response(jsonify({"msg": f"Error creating student: {str(e)}"}), 500)
 
+        # Send email with login credentials
+        self.send_login_email(new_user.email, data['username'], data['password'])
+
         return make_response(jsonify(new_student.to_dict()), 201)
+
+    def send_login_email(self, to_email, username, password):
+        portal_url = 'http://localhost:5173/'
+        msg = Message('Your New Student Portal Account Credentials',
+                    sender='moringaportal@gmail.com',
+                    recipients=[to_email])
+        msg.body = (
+            f'Hello {username},\n\n'
+            f'Welcome to the Student Portal!\n\n'
+            f'Your account has been created successfully. Below are your login credentials:\n\n'
+            f'Email: {to_email}\n'
+            f'Password: {password}\n\n'
+            f'You can log in to the portal by visiting the following link:\n'
+            f'{portal_url}\n\n'
+            f'For security reasons, we recommend that you change your password after logging in for the first time.\n\n'
+            f'If you have any questions or need further assistance, please contact our support team.\n\n'
+            f'Thank you for using the Student Portal!\n\n'
+            f'Best regards,\n'
+            f'Moringa School' 
+        )
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print(f'Error sending email: {e}')
 
 class StudentManager(Resource):
     @jwt_required()
@@ -90,7 +119,6 @@ class StudentManager(Resource):
         student = Student.query.get_or_404(student_id)
         student.first_name = data.get('first_name')
         student.last_name = data.get('last_name')
-        student.date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d')
         student.course_id = data.get('course_id')
         student.current_phase = data.get('current_phase')
         db.session.commit()

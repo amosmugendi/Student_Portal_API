@@ -8,6 +8,7 @@ from students import students_bp  # Import the students blueprint
 from payment import payment_bp  # Import the payment blueprint
 from datetime import timedelta
 # from Mpesa_Auth import mpesa_auth_bp
+from flask_mail import Mail
 
 
 app = Flask(__name__)
@@ -17,6 +18,15 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
 CORS(app)
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587 
+app.config['MAIL_USERNAME'] = 'moringaportal@gmail.com'
+app.config['MAIL_PASSWORD'] = 'fqfk eeie oosg eems'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+
+mail = Mail(app)
 
 # Initialize extensions
 db.init_app(app)

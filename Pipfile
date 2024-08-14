@@ -17,6 +17,7 @@ psycopg2-binary = "*"
 asyncpg = "*"
 faker = "*"
 requests = "*"
+flask-mail = "*"
 
 [dev-packages]
 
