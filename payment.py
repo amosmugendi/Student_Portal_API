@@ -16,7 +16,7 @@ CONSUMER_SECRET = "YbjWV3iLFUo5nRsPTc91oBtDvTDkcvyY5EHuKjvfgTssCpMG2Ezz0PiAuA4h3
 SHORTCODE = "174379"
 PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 TILL = "174379"
-CALLBACK_URL = "https://305a-197-139-44-10.ngrok-free.app/api/payments/callback"  # Update with your actual URL
+CALLBACK_URL = "https://unduly-pleasant-chamois.ngrok-free.app/api/payments/callback"  # Update with your actual URL
 
 class NewMpesa(Resource):
     def post(self):
