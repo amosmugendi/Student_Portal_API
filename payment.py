@@ -44,7 +44,7 @@ class NewMpesa(Resource):
             created_at = datetime.now()
 
             # Generate a unique identifier using user_id, phone number, and UUID
-            unique_identifier = f"{user_id}_{mpesa_no}_{uuid.uuid4().hex}"
+            # unique_identifier = f"{user_id}_{mpesa_no}_{uuid.uuid4().hex}"
 
             # Create a new transaction
             transaction = Transaction(
@@ -112,10 +112,11 @@ class NewMpesa(Resource):
                 # transaction.unique_identifier = merchant_request_id
                 # db.session.commit()
                 print("M-Pesa API response:", mpesa_response_json)
+                customMessage = mpesa_response_json.get("CustomerMessage")
 
                 return {
                     "success": True,
-                    "message": "Payment request in progress",
+                    "message": customMessage,
                     "transactionId": transaction_id,
                 }, 200
             else:
@@ -149,9 +150,17 @@ class MpesaCallback(Resource):
 
             body = callback_data.get('Body', {}).get('stkCallback', {})
             
+            unique_identifier = body.get('MerchantRequestID')
+            
             if 'CallbackMetadata' not in body:
                 message = body.get('ResultDesc', 'Missing CallbackMetadata')
-                return {"error": message, "success": False, "message": message}, 201
+                transaction = Transaction.query.filter_by(unique_identifier=unique_identifier).first()
+                if not transaction:
+                    return {"ResultCode": 1, "ResultDesc": "Transaction not found"}, 400
+                transaction.status = 'failed'
+                db.session.commit()
+                
+                return {"error": message, message: False, "message": message}, 201
 
             metadata = body.get('CallbackMetadata', {}).get('Item', [])
             
@@ -186,7 +195,7 @@ class MpesaCallback(Resource):
             if not transaction:
                 return {"ResultCode": 1, "ResultDesc": "Transaction not found"}, 400
 
-            transaction.status = body['ResultDesc']
+            transaction.status = 'success'
             transaction.mpesa_receipt_number = mpesa_receipt_number
             transaction.payer_names = payer_names
             transaction.amount = amount
@@ -221,10 +230,10 @@ class ConfirmPayment(Resource):
 
             # Check if the transaction status is still pending
             if transaction.status == "pending":
-                return {"success": False, "message": "Transaction still pending. Please wait."}, 200
+                return {"success": False, "status": "pending","message": "Transaction still pending. Please wait."}, 200
             
             # Check if the transaction status is completed or failed
-            if transaction.status in ["success", "failed"]:
+            if transaction.status in ["success"]:
                 return {
                     "success": True,
                     "message": f"Transaction {transaction.status}",
@@ -233,8 +242,9 @@ class ConfirmPayment(Resource):
             else:
                 return {
                     "success": False,
+                    "status": "failed",
                     "message": "Transaction status is unknown or invalid."
-                }, 400
+                }, 201
 
         except Exception as e:
             print(e)
