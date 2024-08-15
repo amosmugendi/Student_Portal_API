@@ -16,7 +16,7 @@ CONSUMER_SECRET = "YbjWV3iLFUo5nRsPTc91oBtDvTDkcvyY5EHuKjvfgTssCpMG2Ezz0PiAuA4h3
 SHORTCODE = "174379"
 PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 TILL = "174379"
-CALLBACK_URL = "http://139.59.33.130:5000/api/payments/callback"  # Update with your actual URL
+CALLBACK_URL = "https://a461-2c0f-fe38-2184-78ca-b015-3ddb-27fe-6e79.ngrok-free.app/api/payments/callback"  # Update with your actual URL
 
 class NewMpesa(Resource):
     def post(self):
@@ -141,19 +141,6 @@ class NewMpesa(Resource):
             print(f"Error generating token: {e}")
             return None
 
-
-class ConfirmPayment(Resource):
-    def get(self, transid):
-        try:
-            transaction = Transaction.query.get(transid)
-            if transaction:
-                return jsonify(transaction.to_dict()), 200
-            else:
-                return {"success": False, "message": "Transaction not found"}, 404
-        except Exception as e:
-            print(e)
-            return {"success": False, "message": "Server error"}, 500
-
 class MpesaCallback(Resource):
     def post(self):
         try:
@@ -224,6 +211,35 @@ class MpesaCallback(Resource):
         except Exception as e:
             print("Error processing callback:", e)
             return jsonify({"error": "Callback processing failed"}), 500
+        
+class ConfirmPayment(Resource):
+    def get(self, transid):
+        try:
+            transaction = Transaction.query.get(transid)
+            if not transaction:
+                return {"success": False, "message": "Transaction not found"}, 404
+
+            # Check if the transaction status is still pending
+            if transaction.status == "pending":
+                return {"success": False, "message": "Transaction still pending. Please wait."}, 200
+            
+            # Check if the transaction status is completed or failed
+            if transaction.status in ["success", "failed"]:
+                return {
+                    "success": True,
+                    "message": f"Transaction {transaction.status}",
+                    "transaction": transaction.to_dict()
+                }, 200
+            else:
+                return {
+                    "success": False,
+                    "message": "Transaction status is unknown or invalid."
+                }, 400
+
+        except Exception as e:
+            print(e)
+            return {"success": False, "message": "Server error"}, 500
+        
 # Add Resources to API
 payment_api.add_resource(NewMpesa, '/new')
 payment_api.add_resource(ConfirmPayment, '/confirm/<int:transid>')
