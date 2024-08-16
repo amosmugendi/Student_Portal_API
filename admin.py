@@ -37,8 +37,9 @@ class CreateStudent(Resource):
     def post(self):
         if not check_admin_role():
             return make_response(jsonify({"msg": "Access denied: Admins only"}), 403)
+        
         data = request.get_json()
-        required_fields = ['username', 'email', 'password', 'role', 'first_name', 'last_name', 'date_of_birth', 'current_phase']
+        required_fields = ['username', 'email', 'password', 'role', 'first_name', 'last_name', 'date_of_birth', 'course_id', 'current_phase']
         for field in required_fields:
             if field not in data:
                 return make_response(jsonify({"msg": f"Missing required field: {field}"}), 400)
@@ -80,6 +81,27 @@ class CreateStudent(Resource):
         except Exception as e:
             db.session.rollback()
             return make_response(jsonify({"msg": f"Error creating student: {str(e)}"}), 500)
+
+        # Fetch course fee
+        course = Course.query.get(data['course_id'])
+        if not course:
+            return make_response(jsonify({"msg": "Course not found"}), 404)
+        
+        amount_due = course.fee
+        
+        # Create FeeBalance
+        try:
+            new_fee_balance = FeeBalance(
+                student_id=new_student.id,
+                amount_due=amount_due,
+                amount_paid=0,  # Assuming no payment has been made yet
+                due_date=datetime.utcnow()  # Set this to an appropriate due date
+            )
+            db.session.add(new_fee_balance)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return make_response(jsonify({"msg": f"Error creating fee balance: {str(e)}"}), 500)
 
         # Send email with login credentials
         self.send_login_email(new_user.email, data['username'], data['password'])
