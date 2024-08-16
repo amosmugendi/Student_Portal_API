@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, make_response
 from flask_restful import Resource, Api
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from models import Student, Grade, FeeBalance, Payment, Course, CourseUnit, Unit, db
+from models import Student, Grade, FeeBalance, Payment, Course, CourseUnit, Unit, db, User
 from flask import jsonify
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -142,7 +142,7 @@ class PaymentReminder(Resource):
     @jwt_required()
     def get(self, user_id):
         try:
-            student = Student.query.filter_by(id=user_id).first_or_404()
+            student = Student.query.filter_by(user_id=user_id).first_or_404()
 
             fee_balances = FeeBalance.query.filter_by(student_id=student.id).all()
 
@@ -172,9 +172,15 @@ class PaymentReminder(Resource):
 
 class UnitsByCourseResource(Resource):
     @jwt_required()  # Requires the user to be logged in
-    def get(self, student_id):
-        # Fetch the student from the database using the provided student_id
-        student = Student.query.get(student_id)
+    def get(self, user_id):
+        # Fetch the user from the database using the provided user_id
+        user = User.query.get(user_id)
+        
+        if not user:
+            return {"error": "User not found"}, 404
+        
+        # Fetch the student associated with this user
+        student = Student.query.filter_by(user_id=user.id).first()
         
         if not student:
             return {"error": "Student not found"}, 404
@@ -212,4 +218,4 @@ students_api.add_resource(DeletePayment, '/<int:user_id>/payments/<int:payment_i
 students_api.add_resource(GetStudentPayments, '/payments')
 students_api.add_resource(StudentTransactionHistory, '/<int:user_id>/transaction_history')
 students_api.add_resource(PaymentReminder, '/<int:user_id>/payment-reminder')
-students_api.add_resource(UnitsByCourseResource, '/units-by-course/<int:student_id>')
+students_api.add_resource(UnitsByCourseResource, '/units-by-course/<int:user_id>')
