@@ -16,7 +16,7 @@ CONSUMER_SECRET = "YbjWV3iLFUo5nRsPTc91oBtDvTDkcvyY5EHuKjvfgTssCpMG2Ezz0PiAuA4h3
 SHORTCODE = "174379"
 PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 TILL = "174379"
-CALLBACK_URL = "http://139.59.33.130:5000/api/payments/callback"  # Update with your actual URL
+CALLBACK_URL = "https://a461-2c0f-fe38-2184-78ca-b015-3ddb-27fe-6e79.ngrok-free.app/api/payments/callback"  # Update with your actual URL
 
 class NewMpesa(Resource):
     def post(self):
@@ -44,7 +44,7 @@ class NewMpesa(Resource):
             created_at = datetime.now()
 
             # Generate a unique identifier using user_id, phone number, and UUID
-            unique_identifier = f"{user_id}_{mpesa_no}_{uuid.uuid4().hex}"
+            # unique_identifier = f"{user_id}_{mpesa_no}_{uuid.uuid4().hex}"
 
             # Create a new transaction
             transaction = Transaction(
@@ -112,10 +112,11 @@ class NewMpesa(Resource):
                 # transaction.unique_identifier = merchant_request_id
                 # db.session.commit()
                 print("M-Pesa API response:", mpesa_response_json)
+                customMessage = mpesa_response_json.get("CustomerMessage")
 
                 return {
                     "success": True,
-                    "message": "Payment request in progress",
+                    "message": customMessage,
                     "transactionId": transaction_id,
                 }, 200
             else:
@@ -141,19 +142,6 @@ class NewMpesa(Resource):
             print(f"Error generating token: {e}")
             return None
 
-
-class ConfirmPayment(Resource):
-    def get(self, transid):
-        try:
-            transaction = Transaction.query.get(transid)
-            if transaction:
-                return jsonify(transaction.to_dict()), 200
-            else:
-                return {"success": False, "message": "Transaction not found"}, 404
-        except Exception as e:
-            print(e)
-            return {"success": False, "message": "Server error"}, 500
-
 class MpesaCallback(Resource):
     def post(self):
         try:
@@ -162,9 +150,17 @@ class MpesaCallback(Resource):
 
             body = callback_data.get('Body', {}).get('stkCallback', {})
             
+            unique_identifier = body.get('MerchantRequestID')
+            
             if 'CallbackMetadata' not in body:
                 message = body.get('ResultDesc', 'Missing CallbackMetadata')
-                return {"error": message, "success": False, "message": message}, 201
+                transaction = Transaction.query.filter_by(unique_identifier=unique_identifier).first()
+                if not transaction:
+                    return {"ResultCode": 1, "ResultDesc": "Transaction not found"}, 400
+                transaction.status = 'failed'
+                db.session.commit()
+                
+                return {"error": message, message: False, "message": message}, 201
 
             metadata = body.get('CallbackMetadata', {}).get('Item', [])
             
@@ -199,7 +195,7 @@ class MpesaCallback(Resource):
             if not transaction:
                 return {"ResultCode": 1, "ResultDesc": "Transaction not found"}, 400
 
-            transaction.status = body['ResultDesc']
+            transaction.status = 'success'
             transaction.mpesa_receipt_number = mpesa_receipt_number
             transaction.payer_names = payer_names
             transaction.amount = amount
@@ -224,6 +220,36 @@ class MpesaCallback(Resource):
         except Exception as e:
             print("Error processing callback:", e)
             return jsonify({"error": "Callback processing failed"}), 500
+        
+class ConfirmPayment(Resource):
+    def get(self, transid):
+        try:
+            transaction = Transaction.query.get(transid)
+            if not transaction:
+                return {"success": False, "message": "Transaction not found"}, 404
+
+            # Check if the transaction status is still pending
+            if transaction.status == "pending":
+                return {"success": False, "status": "pending","message": "Transaction still pending. Please wait."}, 200
+            
+            # Check if the transaction status is completed or failed
+            if transaction.status in ["success"]:
+                return {
+                    "success": True,
+                    "message": f"Transaction {transaction.status}",
+                    "transaction": transaction.to_dict()
+                }, 200
+            else:
+                return {
+                    "success": False,
+                    "status": "failed",
+                    "message": "Transaction status is unknown or invalid."
+                }, 201
+
+        except Exception as e:
+            print(e)
+            return {"success": False, "message": "Server error"}, 500
+        
 # Add Resources to API
 payment_api.add_resource(NewMpesa, '/new')
 payment_api.add_resource(ConfirmPayment, '/confirm/<int:transid>')
